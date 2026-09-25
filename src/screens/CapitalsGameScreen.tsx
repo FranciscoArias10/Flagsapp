@@ -1,0 +1,550 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Country, QuizResult } from '../types';
+import { COUNTRIES } from '../data/countries';
+import { calculateStars, calculateXpEarned } from '../utils/quizGenerator';
+import { IOSColors } from '../utils/colors';
+import { soundService } from '../utils/soundHelper';
+import { FlagImage } from '../components/FlagImage';
+import { ProgressBar } from '../components/ProgressBar';
+import { AppleButton } from '../components/AppleButton';
+import { StreakBadge } from '../components/StreakBadge';
+import { ConfettiView } from '../components/ConfettiView';
+import { useGame } from '../context/GameContext';
+
+interface CapitalQuestion {
+  country: Country;
+  options: string[]; // 4 capital choices
+  correctCapital: string;
+}
+
+export const CapitalsGameScreen: React.FC = () => {
+  const { recordAnswer, recordQuizResult } = useGame();
+
+  const [questions, setQuestions] = useState<CapitalQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedCapital, setSelectedCapital] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [highestStreak, setHighestStreak] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const cardScale = useRef(new Animated.Value(0.92)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    startNewRound();
+  }, []);
+
+  const generateCapitalQuestions = (count = 10): CapitalQuestion[] => {
+    const shuffled = [...COUNTRIES].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, count);
+
+    return selected.map((country) => {
+      // Pick 3 distractors from other capitals
+      const otherCapitals = COUNTRIES
+        .filter((c) => c.capital !== country.capital)
+        .map((c) => c.capital)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+
+      const options = [country.capital, ...otherCapitals].sort(() => 0.5 - Math.random());
+
+      return {
+        country,
+        options,
+        correctCapital: country.capital,
+      };
+    });
+  };
+
+  const startNewRound = () => {
+    const qs = generateCapitalQuestions(10);
+    setQuestions(qs);
+    setCurrentIndex(0);
+    setSelectedCapital(null);
+    setIsAnswered(false);
+    setScore(0);
+    setStreak(0);
+    setHighestStreak(0);
+    setShowSummary(false);
+    setShowConfetti(false);
+    animateCard();
+  };
+
+  const animateCard = () => {
+    cardScale.setValue(0.92);
+    Animated.spring(cardScale, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handleSelectCapital = (cap: string) => {
+    if (isAnswered) return;
+
+    setSelectedCapital(cap);
+    setIsAnswered(true);
+
+    const isCorrect = cap === questions[currentIndex].correctCapital;
+    recordAnswer(isCorrect);
+
+    if (isCorrect) {
+      soundService.triggerSuccess();
+      const nextStreak = streak + 1;
+      setStreak(nextStreak);
+      setHighestStreak((prev) => Math.max(prev, nextStreak));
+      setScore((prev) => prev + 1);
+    } else {
+      soundService.triggerError();
+      triggerShake();
+      setStreak(0);
+    }
+  };
+
+  const handleNext = () => {
+    soundService.triggerLightTap();
+
+    if (currentIndex + 1 < questions.length) {
+      setCurrentIndex((prev) => prev + 1);
+      setSelectedCapital(null);
+      setIsAnswered(false);
+      animateCard();
+    } else {
+      finishRound();
+    }
+  };
+
+  const finishRound = () => {
+    const finalScore = score;
+    const total = questions.length;
+    const stars = calculateStars(finalScore, total);
+    const xpEarned = calculateXpEarned(finalScore, total, highestStreak);
+    const accuracy = Math.round((finalScore / total) * 100);
+
+    const result: QuizResult = {
+      score: finalScore,
+      totalQuestions: total,
+      xpEarned,
+      accuracy,
+      highestStreak,
+      stars,
+    };
+
+    recordQuizResult(result, undefined, 'capitals');
+    setShowSummary(true);
+
+    if (stars >= 2) {
+      setShowConfetti(true);
+      soundService.triggerCelebration();
+    }
+  };
+
+  if (questions.length === 0) return null;
+
+  const currentQ = questions[currentIndex];
+  const progress = (currentIndex + 1) / questions.length;
+
+  if (showSummary) {
+    const stars = calculateStars(score, questions.length);
+    const accuracy = Math.round((score / questions.length) * 100);
+    const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
+
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
+        <View style={styles.summaryWrap}>
+          <Text style={styles.summaryPretitle}>MODO CAPITALES</Text>
+          <Text style={styles.summaryTitle}>
+            {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
+          </Text>
+
+          <View style={styles.starsRow}>
+            {[1, 2, 3].map((s) => (
+              <Ionicons
+                key={s}
+                name="star"
+                size={s === 2 ? 64 : 50}
+                color={stars >= s ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+                style={s === 2 ? styles.centerStar : undefined}
+              />
+            ))}
+          </View>
+
+          <View style={styles.statCardsGrid}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{score}/{questions.length}</Text>
+              <Text style={styles.statLabel}>Aciertos</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemGreen }]}>{accuracy}%</Text>
+              <Text style={styles.statLabel}>Precisión</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemPurple }]}>+{xpEarned}</Text>
+              <Text style={styles.statLabel}>XP Ganada</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemOrange }]}>{highestStreak} 🔥</Text>
+              <Text style={styles.statLabel}>Racha</Text>
+            </View>
+          </View>
+
+          <AppleButton
+            title="Nueva Ronda de Capitales"
+            onPress={startNewRound}
+            variant="gradient"
+            style={{ width: '100%' }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.topHeader}>
+        <View style={styles.progressContainer}>
+          <ProgressBar
+            progress={progress}
+            height={8}
+            gradientColors={['#AF52DE', '#5856D6']}
+          />
+          <Text style={styles.questionCounter}>
+            {currentIndex + 1} de {questions.length}
+          </Text>
+        </View>
+        <StreakBadge streak={streak} size="small" />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Country Header Card */}
+        <Animated.View
+          style={[
+            styles.countryCard,
+            {
+              transform: [{ scale: cardScale }, { translateX: shakeAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.questionSubtitle}>¿Cuál es la capital de...?</Text>
+          <Text style={styles.countryName}>{currentQ.country.name}</Text>
+
+          <View style={styles.flagContainer}>
+            <FlagImage
+              countryCode={currentQ.country.code}
+              fallbackEmoji={currentQ.country.flagEmoji}
+              width={140}
+              height={90}
+              borderRadius={14}
+            />
+          </View>
+
+          <View style={styles.infoPill}>
+            <Ionicons name="compass" size={14} color={IOSColors.systemPurple} />
+            <Text style={styles.infoPillText}>{currentQ.country.continent}</Text>
+          </View>
+        </Animated.View>
+
+        {/* Capital Choices */}
+        <View style={styles.choicesList}>
+          {currentQ.options.map((cap) => {
+            const isSelected = selectedCapital === cap;
+            const isCorrect = cap === currentQ.correctCapital;
+
+            let cardStyle = styles.choiceNormal;
+            let iconName: keyof typeof Ionicons.glyphMap | null = null;
+            let iconColor = IOSColors.secondaryLabel;
+
+            if (isAnswered) {
+              if (isCorrect) {
+                cardStyle = styles.choiceCorrect;
+                iconName = 'checkmark-circle';
+                iconColor = IOSColors.systemGreen;
+              } else if (isSelected) {
+                cardStyle = styles.choiceWrong;
+                iconName = 'close-circle';
+                iconColor = IOSColors.systemRed;
+              }
+            }
+
+            return (
+              <Pressable
+                key={cap}
+                onPress={() => handleSelectCapital(cap)}
+                disabled={isAnswered}
+                style={[styles.choiceCard, cardStyle]}
+              >
+                <View style={styles.choiceRow}>
+                  <Ionicons
+                    name="business-outline"
+                    size={20}
+                    color={
+                      isAnswered && isCorrect
+                        ? IOSColors.systemGreen
+                        : isAnswered && isSelected
+                        ? IOSColors.systemRed
+                        : IOSColors.systemPurple
+                    }
+                    style={{ marginRight: 12 }}
+                  />
+                  <Text
+                    style={[
+                      styles.choiceText,
+                      isAnswered && isCorrect && styles.textCorrect,
+                      isAnswered && isSelected && !isCorrect && styles.textWrong,
+                    ]}
+                  >
+                    {cap}
+                  </Text>
+                </View>
+                {iconName && <Ionicons name={iconName} size={22} color={iconColor} />}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Country Fact Sheet */}
+        {isAnswered && (
+          <View style={styles.factCard}>
+            <View style={styles.factHeader}>
+              <Ionicons name="sparkles" size={16} color={IOSColors.systemPurple} />
+              <Text style={styles.factTitle}>Dato del País</Text>
+            </View>
+            <Text style={styles.factBody}>{currentQ.country.fact}</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Floating Next Button */}
+      {isAnswered && (
+        <View style={styles.bottomBar}>
+          <AppleButton
+            title={currentIndex + 1 < questions.length ? 'Siguiente Capital' : 'Ver Puntuación'}
+            onPress={handleNext}
+            variant="gradient"
+            hapticStyle="medium"
+          />
+        </View>
+      )}
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  progressContainer: {
+    flex: 1,
+    marginRight: 16,
+    alignItems: 'center',
+  },
+  questionCounter: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: IOSColors.tertiaryLabel,
+    marginTop: 6,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 110,
+  },
+  countryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+    ...IOSColors.cardShadow,
+  },
+  questionSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: IOSColors.secondaryLabel,
+    marginBottom: 4,
+  },
+  countryName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: IOSColors.label,
+    letterSpacing: -0.4,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  flagContainer: {
+    marginBottom: 14,
+  },
+  infoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(175, 82, 222, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  infoPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: IOSColors.systemPurple,
+    marginLeft: 5,
+  },
+  choicesList: {
+    gap: 12,
+  },
+  choiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+    ...IOSColors.cardShadow,
+  },
+  choiceNormal: {},
+  choiceCorrect: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderColor: IOSColors.systemGreen,
+  },
+  choiceWrong: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderColor: IOSColors.systemRed,
+  },
+  choiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  choiceText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: IOSColors.label,
+  },
+  textCorrect: {
+    color: IOSColors.systemGreen,
+  },
+  textWrong: {
+    color: IOSColors.systemRed,
+  },
+  factCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(175, 82, 222, 0.2)',
+    ...IOSColors.cardShadow,
+  },
+  factHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  factTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: IOSColors.systemPurple,
+    marginLeft: 6,
+  },
+  factBody: {
+    fontSize: 14,
+    color: IOSColors.label,
+    lineHeight: 20,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  summaryWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  summaryPretitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: IOSColors.systemPurple,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  summaryTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 20,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+  },
+  centerStar: {
+    marginHorizontal: 16,
+    top: -10,
+  },
+  statCardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 32,
+    gap: 12,
+  },
+  statBox: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    ...IOSColors.cardShadow,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+  },
+});

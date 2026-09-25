@@ -1,0 +1,611 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Country, QuizQuestion, QuizResult, Continent } from '../types';
+import { generateQuizQuestions, calculateStars, calculateXpEarned } from '../utils/quizGenerator';
+import { IOSColors } from '../utils/colors';
+import { soundService } from '../utils/soundHelper';
+import { FlagImage } from '../components/FlagImage';
+import { ProgressBar } from '../components/ProgressBar';
+import { AppleButton } from '../components/AppleButton';
+import { StreakBadge } from '../components/StreakBadge';
+import { ConfettiView } from '../components/ConfettiView';
+import { useGame } from '../context/GameContext';
+
+interface QuizGameScreenProps {
+  continent?: Continent | 'Mundo';
+  onClose: () => void;
+}
+
+export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
+  continent = 'Mundo',
+  onClose,
+}) => {
+  const { recordAnswer, recordQuizResult } = useGame();
+
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [score, setScore] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [highestStreak, setHighestStreak] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Animations
+  const cardScale = useRef(new Animated.Value(0.92)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Star animations in summary
+  const star1Scale = useRef(new Animated.Value(0)).current;
+  const star2Scale = useRef(new Animated.Value(0)).current;
+  const star3Scale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    startNewGame();
+  }, [continent]);
+
+  const startNewGame = () => {
+    const generated = generateQuizQuestions(10, continent, 'flag_to_name');
+    setQuestions(generated);
+    setCurrentIndex(0);
+    setSelectedOptionIndex(null);
+    setIsAnswered(false);
+    setScore(0);
+    setCurrentStreak(0);
+    setHighestStreak(0);
+    setShowSummary(false);
+    setShowConfetti(false);
+    animateQuestionIn();
+  };
+
+  const animateQuestionIn = () => {
+    cardScale.setValue(0.92);
+    cardOpacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(cardScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handleSelectOption = (index: number) => {
+    if (isAnswered) return;
+
+    setSelectedOptionIndex(index);
+    setIsAnswered(true);
+
+    const currentQ = questions[currentIndex];
+    const isCorrect = index === currentQ.correctOptionIndex;
+
+    recordAnswer(isCorrect);
+
+    if (isCorrect) {
+      soundService.triggerSuccess();
+      const nextStreak = currentStreak + 1;
+      setCurrentStreak(nextStreak);
+      setHighestStreak((prev) => Math.max(prev, nextStreak));
+      setScore((prev) => prev + 1);
+    } else {
+      soundService.triggerError();
+      triggerShake();
+      setCurrentStreak(0);
+    }
+  };
+
+  const handleNext = () => {
+    soundService.triggerLightTap();
+
+    if (currentIndex + 1 < questions.length) {
+      setCurrentIndex((prev) => prev + 1);
+      setSelectedOptionIndex(null);
+      setIsAnswered(false);
+      animateQuestionIn();
+    } else {
+      finishGame();
+    }
+  };
+
+  const finishGame = () => {
+    const finalScore = score;
+    const total = questions.length;
+    const stars = calculateStars(finalScore, total);
+    const xpEarned = calculateXpEarned(finalScore, total, highestStreak);
+    const accuracy = Math.round((finalScore / total) * 100);
+
+    const result: QuizResult = {
+      score: finalScore,
+      totalQuestions: total,
+      xpEarned,
+      accuracy,
+      highestStreak,
+      stars,
+    };
+
+    recordQuizResult(result, continent === 'Mundo' ? undefined : continent, 'flags');
+    setShowSummary(true);
+
+    if (stars >= 2) {
+      setShowConfetti(true);
+      soundService.triggerCelebration();
+    }
+
+    // Sequence star pop animations
+    star1Scale.setValue(0);
+    star2Scale.setValue(0);
+    star3Scale.setValue(0);
+
+    setTimeout(() => {
+      if (stars >= 1) {
+        Animated.spring(star1Scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+      }
+    }, 200);
+    setTimeout(() => {
+      if (stars >= 2) {
+        Animated.spring(star2Scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+      }
+    }, 450);
+    setTimeout(() => {
+      if (stars >= 3) {
+        Animated.spring(star3Scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+      }
+    }, 700);
+  };
+
+  if (questions.length === 0) return null;
+
+  const currentQ = questions[currentIndex];
+  const progress = (currentIndex + 1) / questions.length;
+
+  if (showSummary) {
+    const stars = calculateStars(score, questions.length);
+    const accuracy = Math.round((score / questions.length) * 100);
+    const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
+
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryPretitle}>RONDA COMPLETADA</Text>
+          <Text style={styles.summaryTitle}>
+            {stars === 3 ? '¡Excelente!' : stars === 2 ? '¡Gran Trabajo!' : '¡Sigue Practicando!'}
+          </Text>
+
+          {/* Stars */}
+          <View style={styles.starsRow}>
+            <Animated.View style={{ transform: [{ scale: star1Scale }] }}>
+              <Ionicons
+                name="star"
+                size={54}
+                color={stars >= 1 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+              />
+            </Animated.View>
+            <Animated.View style={[{ transform: [{ scale: star2Scale }] }, styles.centerStar]}>
+              <Ionicons
+                name="star"
+                size={70}
+                color={stars >= 2 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+              />
+            </Animated.View>
+            <Animated.View style={{ transform: [{ scale: star3Scale }] }}>
+              <Ionicons
+                name="star"
+                size={54}
+                color={stars >= 3 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+              />
+            </Animated.View>
+          </View>
+
+          {/* Stat Cards */}
+          <View style={styles.statCardsGrid}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{score}/{questions.length}</Text>
+              <Text style={styles.statLabel}>Aciertos</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemGreen }]}>{accuracy}%</Text>
+              <Text style={styles.statLabel}>Precisión</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemPurple }]}>+{xpEarned}</Text>
+              <Text style={styles.statLabel}>XP Ganada</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: IOSColors.systemOrange }]}>{highestStreak} 🔥</Text>
+              <Text style={styles.statLabel}>Mejor Racha</Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.summaryActions}>
+            <AppleButton
+              title="Jugar Otra Vez"
+              onPress={startNewGame}
+              variant="gradient"
+              style={styles.actionBtn}
+            />
+            <AppleButton
+              title="Menú Principal"
+              onPress={onClose}
+              variant="secondary"
+              style={styles.actionBtn}
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+          <Ionicons name="close-circle" size={30} color={IOSColors.tertiaryLabel} />
+        </Pressable>
+
+        <View style={styles.progressContainer}>
+          <ProgressBar progress={progress} height={8} />
+          <Text style={styles.questionCounter}>
+            {currentIndex + 1} de {questions.length}
+          </Text>
+        </View>
+
+        <View style={styles.streakWrap}>
+          <StreakBadge streak={currentStreak} size="small" />
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Animated Question Card */}
+        <Animated.View
+          style={[
+            styles.questionCard,
+            {
+              opacity: cardOpacity,
+              transform: [{ scale: cardScale }, { translateX: shakeAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.promptText}>¿A qué país pertenece esta bandera?</Text>
+
+          <View style={styles.flagWrap}>
+            <FlagImage
+              countryCode={currentQ.targetCountry.code}
+              fallbackEmoji={currentQ.targetCountry.flagEmoji}
+              width={220}
+              height={140}
+              borderRadius={18}
+            />
+          </View>
+
+          <View style={styles.continentPill}>
+            <Ionicons name="location-sharp" size={13} color={IOSColors.systemBlue} />
+            <Text style={styles.continentPillText}>{currentQ.targetCountry.continent}</Text>
+          </View>
+        </Animated.View>
+
+        {/* Options List */}
+        <View style={styles.optionsContainer}>
+          {currentQ.options.map((option, idx) => {
+            const isSelected = selectedOptionIndex === idx;
+            const isCorrectOption = idx === currentQ.correctOptionIndex;
+
+            let cardStyle = styles.optionNormal;
+            let iconName: keyof typeof Ionicons.glyphMap | null = null;
+            let iconColor = IOSColors.secondaryLabel;
+
+            if (isAnswered) {
+              if (isCorrectOption) {
+                cardStyle = styles.optionCorrect;
+                iconName = 'checkmark-circle';
+                iconColor = IOSColors.systemGreen;
+              } else if (isSelected) {
+                cardStyle = styles.optionWrong;
+                iconName = 'close-circle';
+                iconColor = IOSColors.systemRed;
+              }
+            }
+
+            return (
+              <Pressable
+                key={option.code}
+                onPress={() => handleSelectOption(idx)}
+                disabled={isAnswered}
+                style={[styles.optionCard, cardStyle]}
+              >
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionEmoji}>{option.flagEmoji}</Text>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isAnswered && isCorrectOption && styles.optionTextCorrect,
+                      isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
+                    ]}
+                  >
+                    {option.name}
+                  </Text>
+                </View>
+                {iconName && (
+                  <Ionicons name={iconName} size={22} color={iconColor} />
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Fun Fact Sheet (Revealed after answer) */}
+        {isAnswered && (
+          <View style={styles.factContainer}>
+            <View style={styles.factHeader}>
+              <Ionicons name="information-circle" size={18} color={IOSColors.systemBlue} />
+              <Text style={styles.factTitle}>¿Sabías que...?</Text>
+            </View>
+            <Text style={styles.factText}>{currentQ.targetCountry.fact}</Text>
+            <Text style={styles.factCapital}>
+              Capital: <Text style={{ fontWeight: '700' }}>{currentQ.targetCountry.capital}</Text> • Población: {currentQ.targetCountry.population}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Floating Bottom Next Button */}
+      {isAnswered && (
+        <View style={styles.bottomBar}>
+          <AppleButton
+            title={currentIndex + 1 < questions.length ? 'Siguiente Pregunta' : 'Ver Resultados'}
+            onPress={handleNext}
+            variant="gradient"
+            hapticStyle="medium"
+          />
+        </View>
+      )}
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  closeBtn: {
+    padding: 2,
+  },
+  progressContainer: {
+    flex: 1,
+    marginHorizontal: 16,
+    alignItems: 'center',
+  },
+  questionCounter: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: IOSColors.tertiaryLabel,
+    marginTop: 6,
+  },
+  streakWrap: {
+    minWidth: 40,
+    alignItems: 'flex-end',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  questionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+    ...IOSColors.cardShadow,
+  },
+  promptText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: IOSColors.secondaryLabel,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  flagWrap: {
+    marginBottom: 14,
+  },
+  continentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  continentPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: IOSColors.systemBlue,
+    marginLeft: 4,
+  },
+  optionsContainer: {
+    gap: 12,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+    ...IOSColors.cardShadow,
+  },
+  optionNormal: {
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  optionCorrect: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderColor: IOSColors.systemGreen,
+  },
+  optionWrong: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderColor: IOSColors.systemRed,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionEmoji: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  optionText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: IOSColors.label,
+  },
+  optionTextCorrect: {
+    color: IOSColors.systemGreen,
+  },
+  optionTextWrong: {
+    color: IOSColors.systemRed,
+  },
+  factContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.15)',
+    ...IOSColors.cardShadow,
+  },
+  factHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  factTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: IOSColors.systemBlue,
+    marginLeft: 6,
+  },
+  factText: {
+    fontSize: 14,
+    color: IOSColors.label,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  factCapital: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  // Summary Screen Styles
+  summaryContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  summaryPretitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: IOSColors.systemBlue,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  summaryTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 20,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  centerStar: {
+    marginHorizontal: 16,
+    top: -10,
+  },
+  statCardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 32,
+    gap: 12,
+  },
+  statBox: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    ...IOSColors.cardShadow,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+  },
+  summaryActions: {
+    width: '100%',
+    gap: 12,
+  },
+  actionBtn: {
+    width: '100%',
+  },
+});
