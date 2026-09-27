@@ -50,6 +50,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
   const scrollViewRef = useRef<ScrollView>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownAnim = useRef(new Animated.Value(0)).current;
 
   // Animations
   const cardScale = useRef(new Animated.Value(0.92)).current;
@@ -76,6 +77,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    countdownAnim.stopAnimation();
+    countdownAnim.setValue(0);
     const generated = generateQuizQuestions(10, continent, 'flag_to_name');
     setQuestions(generated);
     setCurrentIndex(0);
@@ -165,6 +168,14 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 120);
 
+    // Visual countdown bar animation
+    countdownAnim.setValue(0);
+    Animated.timing(countdownAnim, {
+      toValue: 1,
+      duration: isCorrect ? 1200 : 1600,
+      useNativeDriver: false,
+    }).start();
+
     // Auto-advance: fast (1200ms on correct, 1600ms on error)
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
     autoAdvanceTimer.current = setTimeout(() => {
@@ -177,6 +188,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    countdownAnim.stopAnimation();
+    countdownAnim.setValue(0);
 
     soundService.triggerLightTap();
 
@@ -485,19 +498,69 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
         {/* Auto Advance Indicator - Tapping advances instantly */}
         {isAnswered && (
-          <Pressable onPress={handleNext} style={styles.autoAdvanceCard}>
-            <View style={styles.autoAdvanceLeft}>
-              <Ionicons
-                name="flash"
-                size={16}
-                color={selectedOptionIndex === currentQ.correctOptionIndex ? IOSColors.systemGreen : IOSColors.systemOrange}
-              />
-              <Text style={styles.autoAdvanceText}>
-                {currentIndex + 1 < questions.length ? 'Avanzando automáticamente...' : 'Calculando resultados...'}
-              </Text>
+          <Pressable
+            onPress={handleNext}
+            style={({ pressed }) => [
+              styles.autoAdvanceCard,
+              pressed && { transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <View style={styles.autoAdvanceContent}>
+              <View style={styles.autoAdvanceLeft}>
+                <View
+                  style={[
+                    styles.flashCircle,
+                    {
+                      backgroundColor:
+                        selectedOptionIndex === currentQ.correctOptionIndex
+                          ? 'rgba(52, 199, 89, 0.12)'
+                          : 'rgba(255, 149, 0, 0.12)',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="flash"
+                    size={14}
+                    color={
+                      selectedOptionIndex === currentQ.correctOptionIndex
+                        ? IOSColors.systemGreen
+                        : IOSColors.systemOrange
+                    }
+                  />
+                </View>
+                <View style={styles.autoAdvanceTextWrap}>
+                  <Text style={styles.autoAdvanceTitle} numberOfLines={1}>
+                    {currentIndex + 1 < questions.length ? 'Siguiente Pregunta' : 'Ver Resultados'}
+                  </Text>
+                  <Text style={styles.autoAdvanceSubtitle} numberOfLines={1}>
+                    Avanzando automáticamente
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.skipBtnPill}>
+                <Text style={styles.skipBtnText}>Saltar</Text>
+                <Ionicons name="arrow-forward" size={12} color={IOSColors.systemBlue} style={{ marginLeft: 3 }} />
+              </View>
             </View>
-            <View style={styles.skipBtnPill}>
-              <Text style={styles.skipBtnText}>Saltar ➔</Text>
+
+            {/* Micro timer track */}
+            <View style={styles.countdownTrack}>
+              <Animated.View
+                style={[
+                  styles.countdownFill,
+                  {
+                    width: countdownAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                    backgroundColor:
+                      selectedOptionIndex === currentQ.correctOptionIndex
+                        ? IOSColors.systemGreen
+                        : IOSColors.systemBlue,
+                  },
+                ]}
+              />
             </View>
           </Pressable>
         )}
@@ -716,39 +779,71 @@ const styles = StyleSheet.create({
   },
   // Auto advance prompt styles
   autoAdvanceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.18)',
+    overflow: 'hidden',
+    ...IOSColors.cardShadow,
+  },
+  autoAdvanceContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 14,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.2)',
-    ...IOSColors.cardShadow,
   },
   autoAdvanceLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flex: 1,
+    marginRight: 12,
+  },
+  flashCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  autoAdvanceTextWrap: {
     flex: 1,
   },
-  autoAdvanceText: {
-    fontSize: 13,
-    fontWeight: '600',
+  autoAdvanceTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: IOSColors.label,
+    letterSpacing: -0.2,
+  },
+  autoAdvanceSubtitle: {
+    fontSize: 11,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+    marginTop: 1,
   },
   skipBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    flexShrink: 0,
   },
   skipBtnText: {
     fontSize: 12,
     fontWeight: '700',
     color: IOSColors.systemBlue,
+  },
+  countdownTrack: {
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    width: '100%',
+  },
+  countdownFill: {
+    height: '100%',
   },
   // Interactive Stat Card styles
   statBoxInteractive: {
