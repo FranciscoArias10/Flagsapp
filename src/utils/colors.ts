@@ -45,6 +45,8 @@ export const IOSColors = {
   streakFire: '#FF5722',
   xpPurple: '#7E57C2',
   heartRed: '#FF3B30',
+  correctCardBackground: '#EAF8EE',
+  wrongCardBackground: '#FDEEEE',
 
   // Shadows
   cardShadow: {

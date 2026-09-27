@@ -459,12 +459,14 @@ const styles = StyleSheet.create({
   },
   optBase: {},
   optCorrect: {
-    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+    backgroundColor: IOSColors.correctCardBackground,
     borderColor: IOSColors.systemGreen,
+    elevation: 2,
   },
   optWrong: {
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    backgroundColor: IOSColors.wrongCardBackground,
     borderColor: IOSColors.systemRed,
+    elevation: 2,
   },
   optText: {
     fontSize: 18,

@@ -457,12 +457,14 @@ const styles = StyleSheet.create({
   },
   choiceNormal: {},
   choiceCorrect: {
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    backgroundColor: IOSColors.correctCardBackground,
     borderColor: IOSColors.systemGreen,
+    elevation: 2,
   },
   choiceWrong: {
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    backgroundColor: IOSColors.wrongCardBackground,
     borderColor: IOSColors.systemRed,
+    elevation: 2,
   },
   choiceRow: {
     flexDirection: 'row',
