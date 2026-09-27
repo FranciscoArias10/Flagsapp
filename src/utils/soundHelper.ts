@@ -1,28 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
 
 class SoundService {
   private hapticsEnabled: boolean = true;
   private soundEnabled: boolean = true;
-  private correctSound: Audio.Sound | null = null;
-  private wrongSound: Audio.Sound | null = null;
-  private victorySound: Audio.Sound | null = null;
-
-  constructor() {
-    this.initAudio();
-  }
-
-  private async initAudio() {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
-    } catch {
-      // Audio mode fallback
-    }
-  }
 
   public setPreferences(sound: boolean, haptics: boolean) {
     this.soundEnabled = sound;

@@ -6,7 +6,6 @@
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.25",
-    "expo-av": "^16.0.8",
     "expo-blur": "~57.0.3",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
@@ -26,7 +25,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "emu": "./run-emulator.sh"
   },
   "private": true
 }
