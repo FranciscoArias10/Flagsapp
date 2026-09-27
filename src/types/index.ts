@@ -12,6 +12,7 @@ export interface Country {
 }
 
 export type QuizType = 'flag_to_name' | 'country_to_capital' | 'blitz';
+export type BlitzDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface QuizQuestion {
   id: string;

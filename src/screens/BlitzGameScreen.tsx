@@ -7,10 +7,12 @@ import {
   Animated,
   Platform,
   StatusBar as RNStatusBar,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Country, QuizResult, AnswerReviewItem } from '../types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Country, QuizResult, AnswerReviewItem, BlitzDifficulty } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { calculateXpEarned } from '../utils/quizGenerator';
 import { IOSColors } from '../utils/colors';
@@ -28,13 +30,84 @@ interface BlitzQuestion {
   correctIndex: number;
 }
 
+export interface BlitzDifficultyConfig {
+  key: BlitzDifficulty;
+  title: string;
+  badge: string;
+  seconds: number;
+  bonus: number;
+  penalty: number;
+  subtitle: string;
+  description: string;
+  color: string;
+  gradient: [string, string];
+  icon: keyof typeof Ionicons.glyphMap;
+  tag: string;
+  tagBg: string;
+  tagColor: string;
+}
+
+export const BLITZ_DIFFICULTIES: Record<BlitzDifficulty, BlitzDifficultyConfig> = {
+  easy: {
+    key: 'easy',
+    title: 'Rápido',
+    badge: '15 Segundos',
+    seconds: 15,
+    bonus: 2,
+    penalty: 2,
+    subtitle: 'Calentamiento ágil',
+    description: '15s iniciales • +2s acierto • -2s fallo',
+    color: '#34C759',
+    gradient: ['#34C759', '#30D158'],
+    icon: 'speedometer-outline',
+    tag: 'AGILIDAD',
+    tagBg: 'rgba(52, 199, 89, 0.12)',
+    tagColor: '#34C759',
+  },
+  medium: {
+    key: 'medium',
+    title: 'Frenético',
+    badge: '10 Segundos',
+    seconds: 10,
+    bonus: 2,
+    penalty: 2,
+    subtitle: 'Ritmo voraz y electrizante',
+    description: '10s iniciales • +2s acierto • -2s fallo',
+    color: '#FF9500',
+    gradient: ['#FF9500', '#FF3B30'],
+    icon: 'flame',
+    tag: 'RECOMENDADO',
+    tagBg: 'rgba(255, 149, 0, 0.12)',
+    tagColor: '#FF9500',
+  },
+  hard: {
+    key: 'hard',
+    title: 'Extremo',
+    badge: '5 Segundos',
+    seconds: 5,
+    bonus: 1,
+    penalty: 2,
+    subtitle: '¡Solo 5 segundos! Reflejos sobrehumanos',
+    description: '5s iniciales • +1s acierto • -2s fallo',
+    color: '#FF3B30',
+    gradient: ['#FF3B30', '#AF52DE'],
+    icon: 'skull-outline',
+    tag: 'HARDCORE 💀',
+    tagBg: 'rgba(255, 59, 48, 0.12)',
+    tagColor: '#FF3B30',
+  },
+};
+
+type ScreenMode = 'difficulty_select' | 'playing' | 'game_over';
+
 export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
-  const [timeLeft, setTimeLeft] = useState(30); // Frenetic 30s Blitz
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<BlitzDifficulty>('medium');
+  const [timeLeft, setTimeLeft] = useState(10);
   const [currentQ, setCurrentQ] = useState<BlitzQuestion | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -53,11 +126,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
   // Timer interval
   useEffect(() => {
-    generateNextQuestion();
-  }, []);
-
-  useEffect(() => {
-    if (!isPlaying) return;
+    if (screenMode !== 'playing') return;
 
     if (timeLeft <= 0) {
       handleGameOver();
@@ -71,7 +140,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           handleGameOver();
           return 0;
         }
-        if (prev <= 8) {
+        const urgentThreshold = selectedDifficulty === 'hard' ? 3 : 5;
+        if (prev <= urgentThreshold) {
           // Heartbeat pulse when time is running low
           Animated.sequence([
             Animated.timing(timerScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
@@ -84,7 +154,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, timeLeft]);
+  }, [screenMode, timeLeft, selectedDifficulty]);
 
   const generateNextQuestion = () => {
     const randomTarget = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
@@ -114,8 +184,34 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     ]).start();
   };
 
+  const startBlitzWithDifficulty = (diff: BlitzDifficulty) => {
+    soundService.triggerSelection();
+    setSelectedDifficulty(diff);
+    setTimeLeft(BLITZ_DIFFICULTIES[diff].seconds);
+    setScore(0);
+    setStreak(0);
+    setHighestStreak(0);
+    setReviewItems([]);
+    setShowConfetti(false);
+    setShowReviewModal(false);
+    setBonusText(null);
+    setSelectedIdx(null);
+    setIsAnswered(false);
+    setScreenMode('playing');
+    generateNextQuestion();
+  };
+
+  const restartBlitz = () => {
+    startBlitzWithDifficulty(selectedDifficulty);
+  };
+
+  const handleChangeDifficulty = () => {
+    soundService.triggerLightTap();
+    setScreenMode('difficulty_select');
+  };
+
   const handleSelectOption = (idx: number) => {
-    if (isAnswered || !currentQ || !isPlaying) return;
+    if (isAnswered || !currentQ || screenMode !== 'playing') return;
 
     setSelectedIdx(idx);
     setIsAnswered(true);
@@ -123,6 +219,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     const isCorrect = idx === currentQ.correctIndex;
     const userAnswer = currentQ.options[idx]?.name || '';
     const correctAnswer = currentQ.options[currentQ.correctIndex]?.name || '';
+    const diffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
 
     // Record review item
     setReviewItems((prev) => [
@@ -147,28 +244,28 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       setStreak(nextStreak);
       setHighestStreak((prev) => Math.max(prev, nextStreak));
       setScore((prev) => prev + 1);
-      setTimeLeft((prev) => prev + 2); // +2s bonus
-      showBonusPopup('+2s');
+      setTimeLeft((prev) => prev + diffConfig.bonus);
+      showBonusPopup(`+${diffConfig.bonus}s`);
 
-      // Fast frantic transition (280ms)
+      // Fast frantic transition (260ms)
       setTimeout(() => {
         generateNextQuestion();
-      }, 280);
+      }, 260);
     } else {
       soundService.triggerError();
       setStreak(0);
-      setTimeLeft((prev) => Math.max(0, prev - 3)); // -3s penalty
-      showBonusPopup('-3s');
+      setTimeLeft((prev) => Math.max(0, prev - diffConfig.penalty));
+      showBonusPopup(`-${diffConfig.penalty}s`);
 
-      // Quick recovery transition (420ms)
+      // Quick recovery transition (380ms)
       setTimeout(() => {
         generateNextQuestion();
-      }, 420);
+      }, 380);
     }
   };
 
   const handleGameOver = () => {
-    setIsPlaying(false);
+    setScreenMode('game_over');
     const finalScore = score;
     const total = score + (streak === 0 && score > 0 ? 3 : 1);
     const xpEarned = calculateXpEarned(finalScore, total, highestStreak, finalScore * 10);
@@ -184,7 +281,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
     recordQuizResult(result, undefined, 'blitz');
 
-    if (finalScore >= 10) {
+    const confettiThreshold = selectedDifficulty === 'hard' ? 5 : 10;
+    if (finalScore >= confettiThreshold) {
       setShowConfetti(true);
       soundService.triggerCelebration();
     } else {
@@ -192,27 +290,129 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     }
   };
 
-  const restartBlitz = () => {
-    setTimeLeft(30);
-    setScore(0);
-    setStreak(0);
-    setHighestStreak(0);
-    setReviewItems([]);
-    setShowConfetti(false);
-    setShowReviewModal(false);
-    setIsPlaying(true);
-    generateNextQuestion();
-  };
+  // 1. DIFFICULTY SELECTION SCREEN
+  if (screenMode === 'difficulty_select') {
+    return (
+      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        {/* Header with Close */}
+        <View style={styles.diffHeaderBar}>
+          <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+            <Ionicons name="close-circle" size={32} color={IOSColors.tertiaryLabel} />
+          </Pressable>
+          <View style={styles.diffHeaderTitleWrap}>
+            <Text style={styles.diffPretitle}>MODO CONTRARRELOJ</Text>
+            <Text style={styles.diffTitle}>Desafío Blitz ⚡</Text>
+          </View>
+          <View style={{ width: 32 }} />
+        </View>
 
-  if (!isPlaying) {
+        <ScrollView
+          style={styles.diffScroll}
+          contentContainerStyle={styles.diffScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.diffSubtitle}>
+            Selecciona tu nivel de adrenalina. Cada acierto suma segundos al reloj, pero cada error te restará tiempo:
+          </Text>
+
+          {/* Cards for each difficulty */}
+          {(Object.keys(BLITZ_DIFFICULTIES) as BlitzDifficulty[]).map((key) => {
+            const diff = BLITZ_DIFFICULTIES[key];
+            const isFeatured = key === 'medium';
+            const isHard = key === 'hard';
+
+            return (
+              <Pressable
+                key={diff.key}
+                onPress={() => startBlitzWithDifficulty(diff.key)}
+                style={({ pressed }) => [
+                  styles.diffCard,
+                  isFeatured && styles.diffCardFeatured,
+                  isHard && styles.diffCardHard,
+                  pressed && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                {/* Header row */}
+                <View style={styles.diffCardTopRow}>
+                  <LinearGradient
+                    colors={diff.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.diffIconGradient}
+                  >
+                    <Ionicons name={diff.icon} size={22} color="#FFFFFF" />
+                  </LinearGradient>
+
+                  <View style={styles.diffCardHeadText}>
+                    <View style={styles.diffTitleLine}>
+                      <Text style={styles.diffCardTitle}>{diff.title}</Text>
+                      <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
+                        <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
+                          {diff.tag}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.diffCardSubtitle}>{diff.subtitle}</Text>
+                  </View>
+                </View>
+
+                {/* Rules Pills Row */}
+                <View style={styles.diffPillsRow}>
+                  <View style={styles.diffRulePill}>
+                    <Ionicons name="timer-outline" size={14} color={diff.color} />
+                    <Text style={[styles.diffRulePillText, { color: diff.color }]}>
+                      {diff.seconds}s iniciales
+                    </Text>
+                  </View>
+                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
+                    <Ionicons name="add-circle-outline" size={14} color={IOSColors.systemGreen} />
+                    <Text style={[styles.diffRulePillText, { color: IOSColors.systemGreen }]}>
+                      +{diff.bonus}s acierto
+                    </Text>
+                  </View>
+                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
+                    <Ionicons name="remove-circle-outline" size={14} color={IOSColors.systemRed} />
+                    <Text style={[styles.diffRulePillText, { color: IOSColors.systemRed }]}>
+                      -{diff.penalty}s fallo
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Bottom CTA bar */}
+                <View style={styles.diffCardBottomBar}>
+                  <Text style={styles.diffCardPlayText}>Toca para comenzar</Text>
+                  <View style={[styles.diffArrowCircle, { backgroundColor: diff.color }]}>
+                    <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+                  </View>
+                </View>
+              </Pressable>
+            );
+          })}
+
+          <View style={styles.diffTipBox}>
+            <Ionicons name="information-circle-outline" size={18} color={IOSColors.secondaryLabel} />
+            <Text style={styles.diffTipText}>
+              En el modo Extremo tienes solo 5 segundos iniciales. ¡Necesitarás reflejos inmediatos de menos de un segundo para sobrevivir!
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // 2. GAME OVER / RESULTS SCREEN
+  if (screenMode === 'game_over') {
+    const currentDiffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
     const rankTitle =
-      score >= 18
+      score >= 16
         ? '⚡ Dios del Rayo'
-        : score >= 12
+        : score >= 10
         ? '🚀 Supersónico'
-        : score >= 7
+        : score >= 6
         ? '🏎️ Veloz'
-        : '🧭 Explorador Ágil';
+        : score >= 3
+        ? '🧭 Explorador Ágil'
+        : '⏱️ Buen Intento';
 
     return (
       <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -220,6 +420,19 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
         <View style={styles.gameOverWrap}>
           <Text style={styles.blitzPretitle}>¡TIEMPO AGOTADO!</Text>
           <Text style={styles.blitzRank}>{rankTitle}</Text>
+
+          {/* Difficulty Badge */}
+          <View
+            style={[
+              styles.diffBadgeGameOver,
+              { backgroundColor: currentDiffConfig.tagBg, borderColor: currentDiffConfig.color },
+            ]}
+          >
+            <Ionicons name={currentDiffConfig.icon} size={15} color={currentDiffConfig.color} />
+            <Text style={[styles.diffBadgeGameOverText, { color: currentDiffConfig.color }]}>
+              DIFICULTAD: {currentDiffConfig.title.toUpperCase()} ({currentDiffConfig.seconds}S)
+            </Text>
+          </View>
 
           <Pressable
             onPress={() => {
@@ -281,17 +494,26 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
           <View style={styles.actions}>
             <AppleButton
-              title="Jugar Blitz Otra Vez (30s)"
+              title={`Jugar Otra Vez (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
               onPress={restartBlitz}
               variant="gradient"
               style={{ width: '100%' }}
             />
             <AppleButton
-              title="Volver al Menú"
-              onPress={onClose}
+              title="Cambiar Dificultad"
+              onPress={handleChangeDifficulty}
               variant="secondary"
-              style={{ width: '100%', marginTop: 12 }}
+              style={{ width: '100%', marginTop: 10 }}
             />
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.exitLinkBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={styles.exitLinkBtnText}>Volver al Menú</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -299,15 +521,17 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title="Recuento Blitz (30s)"
+          title={`Recuento Blitz (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
         />
       </View>
     );
   }
 
+  // 3. PLAYING SCREEN
   if (!currentQ) return null;
 
-  const isLowTime = timeLeft <= 10;
+  const urgentThreshold = selectedDifficulty === 'hard' ? 2 : 4;
+  const isLowTime = timeLeft <= urgentThreshold;
 
   return (
     <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -421,10 +645,160 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: IOSColors.systemBackground,
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: IOSColors.systemBackground,
+  // Difficulty Selection Styles
+  diffHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
+  diffHeaderTitleWrap: {
+    alignItems: 'center',
+  },
+  diffPretitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: IOSColors.systemOrange,
+    letterSpacing: 1.4,
+    marginBottom: 2,
+  },
+  diffTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: IOSColors.label,
+  },
+  diffScroll: {
+    flex: 1,
+  },
+  diffScrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  diffSubtitle: {
+    fontSize: 14,
+    color: IOSColors.secondaryLabel,
+    lineHeight: 20,
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  diffCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    ...IOSColors.cardShadow,
+  },
+  diffCardFeatured: {
+    borderColor: 'rgba(255, 149, 0, 0.45)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+  },
+  diffCardHard: {
+    borderColor: 'rgba(255, 59, 48, 0.4)',
+    backgroundColor: '#FFFFFF',
+  },
+  diffCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  diffIconGradient: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  diffCardHeadText: {
+    flex: 1,
+  },
+  diffTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  diffCardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  diffTagBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  diffTagBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  diffCardSubtitle: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+  },
+  diffPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    flexWrap: 'wrap',
+  },
+  diffRulePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  diffRulePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  diffCardBottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  diffCardPlayText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: IOSColors.systemBlue,
+  },
+  diffArrowCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diffTipBox: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 10,
+  },
+  diffTipText: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    flex: 1,
+    lineHeight: 18,
+  },
+
+  // In-Game Blitz Header & Elements
   blitzTopHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,6 +925,8 @@ const styles = StyleSheet.create({
   optTextWrong: {
     color: IOSColors.systemRed,
   },
+
+  // Game Over Styles
   gameOverWrap: {
     flex: 1,
     alignItems: 'center',
@@ -558,30 +934,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   blitzPretitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: IOSColors.systemRed,
     letterSpacing: 1.5,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   blitzRank: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: IOSColors.label,
-    marginBottom: 24,
+    marginBottom: 12,
+  },
+  diffBadgeGameOver: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  diffBadgeGameOverText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   scoreCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 136,
+    height: 136,
+    borderRadius: 68,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
     ...IOSColors.cardShadowLarge,
   },
   bigScore: {
-    fontSize: 48,
+    fontSize: 46,
     fontWeight: '900',
     color: IOSColors.systemBlue,
   },
@@ -594,24 +985,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 20,
     gap: 12,
   },
   statBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     ...IOSColors.cardShadow,
   },
   statNumber: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: IOSColors.secondaryLabel,
     fontWeight: '500',
   },
@@ -621,7 +1012,7 @@ const styles = StyleSheet.create({
   reviewBadgeHintBlitz: {
     position: 'absolute',
     top: 10,
-    right: 18,
+    right: 16,
     backgroundColor: IOSColors.systemBlue,
     flexDirection: 'row',
     alignItems: 'center',
@@ -644,7 +1035,7 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 14,
     borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 149, 0, 0.25)',
     ...IOSColors.cardShadow,
@@ -676,5 +1067,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: IOSColors.secondaryLabel,
     marginTop: 2,
+  },
+  exitLinkBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  exitLinkBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: IOSColors.secondaryLabel,
   },
 });

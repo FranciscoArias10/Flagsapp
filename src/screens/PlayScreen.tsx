@@ -114,11 +114,11 @@ export const PlayScreen: React.FC = () => {
             <View style={styles.heroContent}>
               <View style={styles.heroBadge}>
                 <Ionicons name="flash" size={12} color="#FFFFFF" />
-                <Text style={styles.heroBadgeText}>CONTRARRELOJ 60S</Text>
+                <Text style={styles.heroBadgeText}>CONTRARRELOJ • 5S, 10S O 15S</Text>
               </View>
               <Text style={styles.heroTitle}>Desafío Blitz ⚡</Text>
               <Text style={styles.heroSubtitle}>
-                Acierta tantas banderas como puedas antes de que se agote el tiempo.
+                Elige tu dificultad: 15s, 10s o extremo 5s. ¡Reflejos al límite!
               </Text>
 
               <View style={styles.heroBtn}>
