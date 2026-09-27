@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Country, QuizResult } from '../types';
+import { Country, QuizResult, AnswerReviewItem } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { calculateXpEarned } from '../utils/quizGenerator';
 import { IOSColors } from '../utils/colors';
@@ -19,6 +19,7 @@ import { FlagImage } from '../components/FlagImage';
 import { AppleButton } from '../components/AppleButton';
 import { StreakBadge } from '../components/StreakBadge';
 import { ConfettiView } from '../components/ConfettiView';
+import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
 
 interface BlitzQuestion {
@@ -32,7 +33,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(30); // Frenetic 30s Blitz
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentQ, setCurrentQ] = useState<BlitzQuestion | null>(null);
   const [score, setScore] = useState(0);
@@ -41,6 +42,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   // Animations
   const timerScale = useRef(new Animated.Value(1)).current;
@@ -68,7 +71,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           handleGameOver();
           return 0;
         }
-        if (prev <= 10) {
+        if (prev <= 8) {
           // Heartbeat pulse when time is running low
           Animated.sequence([
             Animated.timing(timerScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
@@ -118,6 +121,24 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     setIsAnswered(true);
 
     const isCorrect = idx === currentQ.correctIndex;
+    const userAnswer = currentQ.options[idx]?.name || '';
+    const correctAnswer = currentQ.options[currentQ.correctIndex]?.name || '';
+
+    // Record review item
+    setReviewItems((prev) => [
+      ...prev,
+      {
+        id: `${currentQ.target.code}-${Date.now()}-${prev.length}`,
+        flagEmoji: currentQ.target.flagEmoji,
+        countryName: currentQ.target.name,
+        countryCode: currentQ.target.code,
+        userAnswer,
+        correctAnswer,
+        isCorrect,
+        fact: currentQ.target.fact,
+      },
+    ]);
+
     recordAnswer(isCorrect);
 
     if (isCorrect) {
@@ -129,19 +150,20 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       setTimeLeft((prev) => prev + 2); // +2s bonus
       showBonusPopup('+2s');
 
-      // Instant transition
+      // Fast frantic transition (280ms)
       setTimeout(() => {
         generateNextQuestion();
-      }, 350);
+      }, 280);
     } else {
       soundService.triggerError();
       setStreak(0);
       setTimeLeft((prev) => Math.max(0, prev - 3)); // -3s penalty
       showBonusPopup('-3s');
 
+      // Quick recovery transition (420ms)
       setTimeout(() => {
         generateNextQuestion();
-      }, 500);
+      }, 420);
     }
   };
 
@@ -171,11 +193,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   };
 
   const restartBlitz = () => {
-    setTimeLeft(60);
+    setTimeLeft(30);
     setScore(0);
     setStreak(0);
     setHighestStreak(0);
+    setReviewItems([]);
     setShowConfetti(false);
+    setShowReviewModal(false);
     setIsPlaying(true);
     generateNextQuestion();
   };
@@ -197,10 +221,25 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           <Text style={styles.blitzPretitle}>¡TIEMPO AGOTADO!</Text>
           <Text style={styles.blitzRank}>{rankTitle}</Text>
 
-          <View style={styles.scoreCircle}>
+          <Pressable
+            onPress={() => {
+              if (reviewItems.length > 0) {
+                soundService.triggerLightTap();
+                setShowReviewModal(true);
+              }
+            }}
+            style={({ pressed }) => [
+              styles.scoreCircle,
+              pressed && { transform: [{ scale: 0.95 }] },
+            ]}
+          >
+            <View style={styles.reviewBadgeHintBlitz}>
+              <Ionicons name="eye" size={11} color="#FFFFFF" />
+              <Text style={styles.reviewBadgeHintText}>VER</Text>
+            </View>
             <Text style={styles.bigScore}>{score}</Text>
-            <Text style={styles.bigScoreLabel}>Aciertos</Text>
-          </View>
+            <Text style={styles.bigScoreLabel}>Aciertos 👆</Text>
+          </Pressable>
 
           <View style={styles.statCardsGrid}>
             <View style={styles.statBox}>
@@ -213,9 +252,36 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             </View>
           </View>
 
+          {/* Dedicated Review Details Row */}
+          {reviewItems.length > 0 && (
+            <Pressable
+              onPress={() => {
+                soundService.triggerLightTap();
+                setShowReviewModal(true);
+              }}
+              style={({ pressed }) => [
+                styles.reviewRowCard,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <View style={styles.reviewRowLeft}>
+                <View style={styles.reviewIconCircle}>
+                  <Ionicons name="clipboard-outline" size={20} color={IOSColors.systemOrange} />
+                </View>
+                <View style={styles.reviewRowMeta}>
+                  <Text style={styles.reviewRowTitle}>Recuento Blitz</Text>
+                  <Text style={styles.reviewRowSubtitle}>
+                    Toca para revisar las {reviewItems.length} banderas respondidas
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={IOSColors.tertiaryLabel} />
+            </Pressable>
+          )}
+
           <View style={styles.actions}>
             <AppleButton
-              title="Jugar Blitz Otra Vez"
+              title="Jugar Blitz Otra Vez (30s)"
               onPress={restartBlitz}
               variant="gradient"
               style={{ width: '100%' }}
@@ -228,6 +294,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             />
           </View>
         </View>
+
+        <ReviewAnswersModal
+          visible={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          items={reviewItems}
+          title="Recuento Blitz (30s)"
+        />
       </View>
     );
   }
@@ -545,5 +618,64 @@ const styles = StyleSheet.create({
   },
   actions: {
     width: '100%',
+  },
+  reviewBadgeHintBlitz: {
+    position: 'absolute',
+    top: 10,
+    right: 18,
+    backgroundColor: IOSColors.systemBlue,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  reviewBadgeHintText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  reviewRowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.25)',
+    ...IOSColors.cardShadow,
+  },
+  reviewRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  reviewIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 149, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reviewRowMeta: {
+    flex: 1,
+  },
+  reviewRowTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: IOSColors.label,
+  },
+  reviewRowSubtitle: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    marginTop: 2,
   },
 });

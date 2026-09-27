@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Country, QuizResult } from '../types';
+import { Country, QuizResult, AnswerReviewItem } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { calculateStars, calculateXpEarned } from '../utils/quizGenerator';
 import { IOSColors } from '../utils/colors';
@@ -21,6 +21,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
 import { StreakBadge } from '../components/StreakBadge';
 import { ConfettiView } from '../components/ConfettiView';
+import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
 
 interface CapitalQuestion {
@@ -43,10 +44,19 @@ export const CapitalsGameScreen: React.FC = () => {
   const [highestStreak, setHighestStreak] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardScale = useRef(new Animated.Value(0.92)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     startNewRound();
@@ -75,6 +85,10 @@ export const CapitalsGameScreen: React.FC = () => {
   };
 
   const startNewRound = () => {
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
     const qs = generateCapitalQuestions(10);
     setQuestions(qs);
     setCurrentIndex(0);
@@ -83,8 +97,10 @@ export const CapitalsGameScreen: React.FC = () => {
     setScore(0);
     setStreak(0);
     setHighestStreak(0);
+    setReviewItems([]);
     setShowSummary(false);
     setShowConfetti(false);
+    setShowReviewModal(false);
     animateCard();
   };
 
@@ -114,7 +130,24 @@ export const CapitalsGameScreen: React.FC = () => {
     setSelectedCapital(cap);
     setIsAnswered(true);
 
-    const isCorrect = cap === questions[currentIndex].correctCapital;
+    const currentQ = questions[currentIndex];
+    const isCorrect = cap === currentQ.correctCapital;
+
+    // Record review item
+    setReviewItems((prev) => [
+      ...prev,
+      {
+        id: `${currentQ.country.code}-${currentIndex}`,
+        flagEmoji: currentQ.country.flagEmoji,
+        countryName: currentQ.country.name,
+        countryCode: currentQ.country.code,
+        userAnswer: cap,
+        correctAnswer: currentQ.correctCapital,
+        isCorrect,
+        fact: currentQ.country.fact,
+      },
+    ]);
+
     recordAnswer(isCorrect);
 
     if (isCorrect) {
@@ -129,13 +162,24 @@ export const CapitalsGameScreen: React.FC = () => {
       setStreak(0);
     }
 
-    // Smooth scroll to display the educational fact and the next button
+    // Smooth scroll to display the educational fact
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 120);
+
+    // Auto-advance with timer: 1200ms on correct, 1600ms on error
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = setTimeout(() => {
+      handleNext();
+    }, isCorrect ? 1200 : 1600);
   };
 
   const handleNext = () => {
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+
     soundService.triggerLightTap();
 
     if (currentIndex + 1 < questions.length) {
@@ -206,10 +250,27 @@ export const CapitalsGameScreen: React.FC = () => {
           </View>
 
           <View style={styles.statCardsGrid}>
-            <View style={styles.statBox}>
+            <Pressable
+              onPress={() => {
+                soundService.triggerLightTap();
+                setShowReviewModal(true);
+              }}
+              style={({ pressed }) => [
+                styles.statBox,
+                styles.statBoxInteractive,
+                pressed && styles.statBoxPressed,
+              ]}
+            >
+              <View style={styles.reviewBadgeHint}>
+                <Ionicons name="eye" size={11} color="#FFFFFF" />
+                <Text style={styles.reviewBadgeHintText}>VER</Text>
+              </View>
               <Text style={styles.statNumber}>{score}/{questions.length}</Text>
-              <Text style={styles.statLabel}>Aciertos</Text>
-            </View>
+              <Text style={[styles.statLabel, { color: IOSColors.systemBlue, fontWeight: '700' }]}>
+                Aciertos 👆
+              </Text>
+            </Pressable>
+
             <View style={styles.statBox}>
               <Text style={[styles.statNumber, { color: IOSColors.systemGreen }]}>{accuracy}%</Text>
               <Text style={styles.statLabel}>Precisión</Text>
@@ -224,6 +285,31 @@ export const CapitalsGameScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Review Details Row Card */}
+          <Pressable
+            onPress={() => {
+              soundService.triggerLightTap();
+              setShowReviewModal(true);
+            }}
+            style={({ pressed }) => [
+              styles.reviewRowCard,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.reviewRowLeft}>
+              <View style={styles.reviewIconCircle}>
+                <Ionicons name="clipboard-outline" size={20} color={IOSColors.systemPurple} />
+              </View>
+              <View style={styles.reviewRowMeta}>
+                <Text style={styles.reviewRowTitle}>Recuento de Capitales</Text>
+                <Text style={styles.reviewRowSubtitle}>
+                  Toca para revisar tus {score} aciertos y {questions.length - score} fallos
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={IOSColors.tertiaryLabel} />
+          </Pressable>
+
           <AppleButton
             title="Nueva Ronda de Capitales"
             onPress={startNewRound}
@@ -231,6 +317,13 @@ export const CapitalsGameScreen: React.FC = () => {
             style={{ width: '100%' }}
           />
         </View>
+
+        <ReviewAnswersModal
+          visible={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          items={reviewItems}
+          title="Recuento de Capitales"
+        />
       </View>
     );
   }
@@ -353,16 +446,23 @@ export const CapitalsGameScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Prominent Next Button inside the scroll content */}
+        {/* Auto Advance Indicator - Tapping advances instantly */}
         {isAnswered && (
-          <View style={styles.nextActionWrap}>
-            <AppleButton
-              title={currentIndex + 1 < questions.length ? 'Siguiente Capital  ➔' : 'Ver Puntuación  🏆'}
-              onPress={handleNext}
-              variant="gradient"
-              hapticStyle="medium"
-            />
-          </View>
+          <Pressable onPress={handleNext} style={styles.autoAdvanceCard}>
+            <View style={styles.autoAdvanceLeft}>
+              <Ionicons
+                name="flash"
+                size={16}
+                color={selectedCapital === currentQ.correctCapital ? IOSColors.systemGreen : IOSColors.systemOrange}
+              />
+              <Text style={styles.autoAdvanceText}>
+                {currentIndex + 1 < questions.length ? 'Avanzando automáticamente...' : 'Calculando puntuación...'}
+              </Text>
+            </View>
+            <View style={styles.skipBtnPill}>
+              <Text style={styles.skipBtnText}>Saltar ➔</Text>
+            </View>
+          </Pressable>
         )}
       </ScrollView>
     </View>
@@ -565,5 +665,111 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: IOSColors.secondaryLabel,
     fontWeight: '500',
+  },
+  // Auto advance prompt styles
+  autoAdvanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(175, 82, 222, 0.25)',
+    ...IOSColors.cardShadow,
+  },
+  autoAdvanceLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  autoAdvanceText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: IOSColors.label,
+  },
+  skipBtnPill: {
+    backgroundColor: 'rgba(175, 82, 222, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  skipBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.systemPurple,
+  },
+  // Interactive Stat Card styles
+  statBoxInteractive: {
+    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  statBoxPressed: {
+    transform: [{ scale: 0.96 }],
+    backgroundColor: '#F0F8FF',
+  },
+  reviewBadgeHint: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: IOSColors.systemBlue,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 2,
+  },
+  reviewBadgeHintText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  // Review Row Card in Summary
+  reviewRowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(175, 82, 222, 0.2)',
+    ...IOSColors.cardShadow,
+  },
+  reviewRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  reviewIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(175, 82, 222, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reviewRowMeta: {
+    flex: 1,
+  },
+  reviewRowTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: IOSColors.label,
+  },
+  reviewRowSubtitle: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    marginTop: 2,
   },
 });

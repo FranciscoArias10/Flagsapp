@@ -1,0 +1,435 @@
+import React, { useState } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Platform,
+  StatusBar as RNStatusBar,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { AnswerReviewItem } from '../types';
+import { IOSColors } from '../utils/colors';
+import { soundService } from '../utils/soundHelper';
+import { AppleButton } from './AppleButton';
+
+interface ReviewAnswersModalProps {
+  visible: boolean;
+  onClose: () => void;
+  items: AnswerReviewItem[];
+  title?: string;
+}
+
+type FilterType = 'all' | 'correct' | 'wrong';
+
+export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
+  visible,
+  onClose,
+  items,
+  title = 'Recuento de Respuestas',
+}) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  const correctCount = items.filter((i) => i.isCorrect).length;
+  const wrongCount = items.length - correctCount;
+
+  const filteredItems = items.filter((item) => {
+    if (filter === 'correct') return item.isCorrect;
+    if (filter === 'wrong') return !item.isCorrect;
+    return true;
+  });
+
+  const handleFilterChange = (newFilter: FilterType) => {
+    soundService.triggerLightTap();
+    setFilter(newFilter);
+  };
+
+  const handleClose = () => {
+    soundService.triggerLightTap();
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
+      <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? topInset : 12 }]}>
+        {/* Modal Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>
+              {correctCount} correctas • {wrongCount} errores
+            </Text>
+          </View>
+          <Pressable onPress={handleClose} hitSlop={12} style={styles.closeBtn}>
+            <Ionicons name="close-circle" size={28} color={IOSColors.secondaryLabel} />
+          </Pressable>
+        </View>
+
+        {/* Quick Summary Pill Bar */}
+        <View style={styles.summaryBar}>
+          <Pressable
+            onPress={() => handleFilterChange('correct')}
+            style={[
+              styles.summaryPill,
+              styles.summaryPillGreen,
+              filter === 'correct' && styles.summaryPillActiveGreen,
+            ]}
+          >
+            <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
+            <Text style={[styles.summaryPillText, { color: IOSColors.systemGreen }]}>
+              {correctCount} Aciertos
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => handleFilterChange('wrong')}
+            style={[
+              styles.summaryPill,
+              styles.summaryPillRed,
+              filter === 'wrong' && styles.summaryPillActiveRed,
+            ]}
+          >
+            <Ionicons name="close-circle" size={16} color={IOSColors.systemRed} />
+            <Text style={[styles.summaryPillText, { color: IOSColors.systemRed }]}>
+              {wrongCount} Fallos
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => handleFilterChange('all')}
+            style={[
+              styles.summaryPill,
+              styles.summaryPillNeutral,
+              filter === 'all' && styles.summaryPillActiveNeutral,
+            ]}
+          >
+            <Ionicons name="list" size={16} color={IOSColors.systemBlue} />
+            <Text style={[styles.summaryPillText, { color: IOSColors.systemBlue }]}>
+              Todos ({items.length})
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Scrollable Questions List */}
+        <ScrollView
+          contentContainerStyle={[styles.listContent, { paddingBottom: 60 + insets.bottom }]}
+          showsVerticalScrollIndicator={true}
+        >
+          {filteredItems.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name={filter === 'wrong' ? 'trophy' : 'checkmark-done-circle'}
+                size={54}
+                color={filter === 'wrong' ? IOSColors.goldStar : IOSColors.systemGreen}
+              />
+              <Text style={styles.emptyTitle}>
+                {filter === 'wrong' ? '¡Ronda Impecable!' : 'No hay elementos'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {filter === 'wrong'
+                  ? 'No tuviste ningún fallo en esta ronda. ¡Excelente memoria!'
+                  : 'No se encontraron preguntas en esta categoría.'}
+              </Text>
+            </View>
+          ) : (
+            filteredItems.map((item, index) => {
+              return (
+                <View
+                  key={item.id || `${item.countryName}-${index}`}
+                  style={[
+                    styles.itemCard,
+                    item.isCorrect ? styles.itemCardCorrect : styles.itemCardWrong,
+                  ]}
+                >
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemLeft}>
+                      <Text style={styles.itemFlagEmoji}>{item.flagEmoji}</Text>
+                      <View style={styles.itemTextWrap}>
+                        <Text style={styles.itemCountryName} numberOfLines={1}>
+                          {item.countryName}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        item.isCorrect ? styles.statusBadgeCorrect : styles.statusBadgeWrong,
+                      ]}
+                    >
+                      <Ionicons
+                        name={item.isCorrect ? 'checkmark' : 'close'}
+                        size={12}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.statusBadgeText}>
+                        {item.isCorrect ? 'ACIERTO' : 'FALLO'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Answers Detail */}
+                  <View style={styles.answersBlock}>
+                    {item.isCorrect ? (
+                      <View style={styles.answerRow}>
+                        <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
+                        <Text style={styles.answerLabel}>Tu respuesta:</Text>
+                        <Text style={[styles.answerValue, { color: IOSColors.systemGreen }]}>
+                          {item.correctAnswer}
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        <View style={styles.answerRow}>
+                          <Ionicons name="close-circle" size={16} color={IOSColors.systemRed} />
+                          <Text style={styles.answerLabel}>Elegiste:</Text>
+                          <Text style={[styles.answerValue, { color: IOSColors.systemRed, textDecorationLine: 'line-through' }]}>
+                            {item.userAnswer}
+                          </Text>
+                        </View>
+                        <View style={[styles.answerRow, { marginTop: 4 }]}>
+                          <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
+                          <Text style={styles.answerLabel}>Era:</Text>
+                          <Text style={[styles.answerValue, { color: IOSColors.systemGreen, fontWeight: '700' }]}>
+                            {item.correctAnswer}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  {/* Curiosity Fact */}
+                  {item.fact && (
+                    <View style={styles.factBox}>
+                      <Ionicons name="bulb-outline" size={14} color={IOSColors.systemOrange} style={{ marginTop: 2, marginRight: 6 }} />
+                      <Text style={styles.factText} numberOfLines={2}>
+                        {item.fact}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
+
+          <View style={{ marginTop: 16 }}>
+            <AppleButton
+              title="Volver a Resultados"
+              onPress={handleClose}
+              variant="gradient"
+              style={{ width: '100%' }}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
+  },
+  headerTitleWrap: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: IOSColors.label,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: IOSColors.secondaryLabel,
+    marginTop: 2,
+  },
+  closeBtn: {
+    marginLeft: 12,
+  },
+  summaryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    gap: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(60, 60, 67, 0.08)',
+  },
+  summaryPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    gap: 5,
+  },
+  summaryPillGreen: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+  },
+  summaryPillActiveGreen: {
+    borderColor: IOSColors.systemGreen,
+    backgroundColor: 'rgba(52, 199, 89, 0.18)',
+  },
+  summaryPillRed: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+  },
+  summaryPillActiveRed: {
+    borderColor: IOSColors.systemRed,
+    backgroundColor: 'rgba(255, 59, 48, 0.18)',
+  },
+  summaryPillNeutral: {
+    backgroundColor: 'rgba(0, 122, 255, 0.08)',
+  },
+  summaryPillActiveNeutral: {
+    borderColor: IOSColors.systemBlue,
+    backgroundColor: 'rgba(0, 122, 255, 0.16)',
+  },
+  summaryPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  itemCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    ...IOSColors.cardShadow,
+  },
+  itemCardCorrect: {
+    borderColor: 'rgba(52, 199, 89, 0.25)',
+  },
+  itemCardWrong: {
+    borderColor: 'rgba(255, 59, 48, 0.25)',
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  itemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  itemFlagEmoji: {
+    fontSize: 26,
+    marginRight: 10,
+  },
+  itemTextWrap: {
+    flex: 1,
+  },
+  itemCountryName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: IOSColors.label,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  statusBadgeCorrect: {
+    backgroundColor: IOSColors.systemGreen,
+  },
+  statusBadgeWrong: {
+    backgroundColor: IOSColors.systemRed,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+  },
+  answersBlock: {
+    backgroundColor: 'rgba(0, 0, 0, 0.025)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  answerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  answerLabel: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+  },
+  answerValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  factBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 149, 0, 0.08)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 8,
+  },
+  factText: {
+    fontSize: 12,
+    color: IOSColors.label,
+    lineHeight: 16,
+    flex: 1,
+  },
+});

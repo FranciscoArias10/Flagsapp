@@ -31,6 +31,17 @@ export interface QuizResult {
   timeSpentSeconds?: number;
 }
 
+export interface AnswerReviewItem {
+  id: string;
+  flagEmoji: string;
+  countryName: string;
+  countryCode?: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  fact?: string;
+}
+
 export interface Achievement {
   id: string;
   title: string;
