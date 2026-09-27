@@ -7,9 +7,11 @@ import {
   FlatList,
   Pressable,
   Modal,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, Continent } from '../types';
 import { COUNTRIES, CONTINENTS } from '../data/countries';
@@ -20,6 +22,8 @@ import { AppleHeader } from '../components/AppleHeader';
 import { AppleButton } from '../components/AppleButton';
 
 export const AtlasScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -79,7 +83,7 @@ export const AtlasScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <AppleHeader
         title="Atlas"
         category="BIBLIOTECA"
@@ -140,7 +144,7 @@ export const AtlasScreen: React.FC = () => {
         data={filteredCountries}
         keyExtractor={(item) => item.code}
         renderItem={renderCountryItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
@@ -160,7 +164,7 @@ export const AtlasScreen: React.FC = () => {
         onRequestClose={() => setSelectedCountry(null)}
       >
         {selectedCountry && (
-          <SafeAreaView style={styles.modalSafeArea}>
+          <View style={[styles.modalSafeArea, { paddingTop: Platform.OS === 'android' ? topInset : 10 }]}>
             <View style={styles.modalHeader}>
               <View style={styles.modalGrabber} />
               <Pressable
@@ -214,14 +218,18 @@ export const AtlasScreen: React.FC = () => {
                 style={{ marginTop: 24 }}
               />
             </ScrollView>
-          </SafeAreaView>
+          </View>
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,

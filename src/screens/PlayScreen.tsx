@@ -6,8 +6,10 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Continent } from '../types';
@@ -23,6 +25,8 @@ import { QuizGameScreen } from './QuizGameScreen';
 import { BlitzGameScreen } from './BlitzGameScreen';
 
 export const PlayScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats } = useGame();
   const levelInfo = getLevelInfo(stats.xp);
 
@@ -56,7 +60,7 @@ export const PlayScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <AppleHeader
         title="Banderas"
         category="APRENDER & JUGAR"
@@ -72,7 +76,7 @@ export const PlayScreen: React.FC = () => {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* User Mini Progress Strip */}
@@ -213,11 +217,15 @@ export const PlayScreen: React.FC = () => {
       >
         <BlitzGameScreen onClose={() => setShowBlitzModal(false)} />
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,

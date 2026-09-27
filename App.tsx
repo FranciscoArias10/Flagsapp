@@ -13,8 +13,10 @@ import { PlayScreen } from './src/screens/PlayScreen';
 import { CapitalsGameScreen } from './src/screens/CapitalsGameScreen';
 import { AtlasScreen } from './src/screens/AtlasScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MainNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [currentTab, setCurrentTab] = useState<TabType>('play');
   const { newAchievementUnlocked, clearAchievementNotification } = useGame();
 
@@ -25,7 +27,7 @@ const MainNavigator: React.FC = () => {
     if (newAchievementUnlocked) {
       Animated.sequence([
         Animated.spring(bannerY, {
-          toValue: 50,
+          toValue: Math.max(insets.top, 24) + 10,
           friction: 6,
           tension: 40,
           useNativeDriver: true,

@@ -6,8 +6,10 @@ import {
   Pressable,
   Animated,
   ScrollView,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizResult } from '../types';
 import { COUNTRIES } from '../data/countries';
@@ -28,6 +30,8 @@ interface CapitalQuestion {
 }
 
 export const CapitalsGameScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
   const [questions, setQuestions] = useState<CapitalQuestion[]>([]);
@@ -40,6 +44,7 @@ export const CapitalsGameScreen: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
   const cardScale = useRef(new Animated.Value(0.92)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -123,6 +128,11 @@ export const CapitalsGameScreen: React.FC = () => {
       triggerShake();
       setStreak(0);
     }
+
+    // Smooth scroll to display the educational fact and the next button
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
   };
 
   const handleNext = () => {
@@ -133,6 +143,7 @@ export const CapitalsGameScreen: React.FC = () => {
       setSelectedCapital(null);
       setIsAnswered(false);
       animateCard();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     } else {
       finishRound();
     }
@@ -174,7 +185,7 @@ export const CapitalsGameScreen: React.FC = () => {
     const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
 
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, { paddingTop: topInset, paddingBottom: 85 + insets.bottom }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryWrap}>
           <Text style={styles.summaryPretitle}>MODO CAPITALES</Text>
@@ -220,12 +231,12 @@ export const CapitalsGameScreen: React.FC = () => {
             style={{ width: '100%' }}
           />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.topHeader}>
         <View style={styles.progressContainer}>
           <ProgressBar
@@ -240,7 +251,11 @@ export const CapitalsGameScreen: React.FC = () => {
         <StreakBadge streak={streak} size="small" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Country Header Card */}
         <Animated.View
           style={[
@@ -337,24 +352,28 @@ export const CapitalsGameScreen: React.FC = () => {
             <Text style={styles.factBody}>{currentQ.country.fact}</Text>
           </View>
         )}
-      </ScrollView>
 
-      {/* Floating Next Button */}
-      {isAnswered && (
-        <View style={styles.bottomBar}>
-          <AppleButton
-            title={currentIndex + 1 < questions.length ? 'Siguiente Capital' : 'Ver Puntuación'}
-            onPress={handleNext}
-            variant="gradient"
-            hapticStyle="medium"
-          />
-        </View>
-      )}
-    </SafeAreaView>
+        {/* Prominent Next Button inside the scroll content */}
+        {isAnswered && (
+          <View style={styles.nextActionWrap}>
+            <AppleButton
+              title={currentIndex + 1 < questions.length ? 'Siguiente Capital  ➔' : 'Ver Puntuación  🏆'}
+              onPress={handleNext}
+              variant="gradient"
+              hapticStyle="medium"
+            />
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,
@@ -485,11 +504,9 @@ const styles = StyleSheet.create({
     color: IOSColors.label,
     lineHeight: 20,
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+  nextActionWrap: {
+    marginTop: 20,
+    width: '100%',
   },
   summaryWrap: {
     flex: 1,

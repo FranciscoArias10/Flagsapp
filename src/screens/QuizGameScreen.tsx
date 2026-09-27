@@ -6,8 +6,10 @@ import {
   Pressable,
   Animated,
   ScrollView,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizQuestion, QuizResult, Continent } from '../types';
 import { generateQuizQuestions, calculateStars, calculateXpEarned } from '../utils/quizGenerator';
@@ -29,6 +31,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   continent = 'Mundo',
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -41,6 +45,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const [showSummary, setShowSummary] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
   // Animations
   const cardScale = useRef(new Animated.Value(0.92)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -120,6 +125,11 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       triggerShake();
       setCurrentStreak(0);
     }
+
+    // Smooth scroll to display the educational fact and the next button
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
   };
 
   const handleNext = () => {
@@ -130,6 +140,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       setSelectedOptionIndex(null);
       setIsAnswered(false);
       animateQuestionIn();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     } else {
       finishGame();
     }
@@ -192,7 +203,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
 
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryPretitle}>RONDA COMPLETADA</Text>
@@ -261,12 +272,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             />
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
@@ -286,7 +297,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        ref={scrollViewRef}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Animated Question Card */}
@@ -366,7 +378,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           })}
         </View>
 
-        {/* Fun Fact Sheet (Revealed after answer) */}
+        {/* Country Fact Sheet */}
         {isAnswered && (
           <View style={styles.factContainer}>
             <View style={styles.factHeader}>
@@ -379,24 +391,28 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             </Text>
           </View>
         )}
-      </ScrollView>
 
-      {/* Floating Bottom Next Button */}
-      {isAnswered && (
-        <View style={styles.bottomBar}>
-          <AppleButton
-            title={currentIndex + 1 < questions.length ? 'Siguiente Pregunta' : 'Ver Resultados'}
-            onPress={handleNext}
-            variant="gradient"
-            hapticStyle="medium"
-          />
-        </View>
-      )}
-    </SafeAreaView>
+        {/* Embedded Next Button */}
+        {isAnswered && (
+          <View style={styles.nextActionWrap}>
+            <AppleButton
+              title={currentIndex + 1 < questions.length ? 'Siguiente Pregunta  ➔' : 'Ver Resultados  🏆'}
+              onPress={handleNext}
+              variant="gradient"
+              hapticStyle="medium"
+            />
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,
@@ -538,11 +554,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: IOSColors.secondaryLabel,
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+  nextActionWrap: {
+    marginTop: 18,
+    width: '100%',
   },
   // Summary Screen Styles
   summaryContainer: {

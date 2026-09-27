@@ -5,8 +5,10 @@ import {
   StyleSheet,
   Pressable,
   Animated,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizResult } from '../types';
 import { COUNTRIES } from '../data/countries';
@@ -26,6 +28,8 @@ interface BlitzQuestion {
 }
 
 export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
   const [timeLeft, setTimeLeft] = useState(60);
@@ -187,7 +191,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
         : '🧭 Explorador Ágil';
 
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.gameOverWrap}>
           <Text style={styles.blitzPretitle}>¡TIEMPO AGOTADO!</Text>
@@ -224,7 +228,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             />
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -233,7 +237,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const isLowTime = timeLeft <= 10;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
       {/* Top Blitz Header */}
       <View style={styles.blitzTopHeader}>
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
@@ -336,11 +340,15 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,

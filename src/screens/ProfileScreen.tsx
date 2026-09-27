@@ -6,8 +6,10 @@ import {
   ScrollView,
   Switch,
   Alert,
-  SafeAreaView,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGame, getLevelInfo } from '../context/GameContext';
 import { IOSColors } from '../utils/colors';
@@ -18,6 +20,8 @@ import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
 
 export const ProfileScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats, achievements, toggleSound, toggleHaptics, resetProgress } = useGame();
 
   const levelInfo = getLevelInfo(stats.xp);
@@ -45,11 +49,11 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <AppleHeader title="Perfil" category="JUGADOR" />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card */}
@@ -188,11 +192,15 @@ export const ProfileScreen: React.FC = () => {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: IOSColors.systemBackground,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,
