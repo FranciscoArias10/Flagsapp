@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -43,9 +43,19 @@ export const ProfileScreen: React.FC = () => {
 
   const currentFavCountry = COUNTRIES.find((c) => c.code === (stats.favoriteCountryCode || 'ec')) || COUNTRIES[0];
 
-  const filteredCountries = countrySearch.trim()
-    ? COUNTRIES.filter((c) => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-    : COUNTRIES.slice(0, 16);
+  const allCountriesSorted = useMemo(() => {
+    return [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }, []);
+
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch.trim()) return allCountriesSorted;
+    const query = countrySearch.toLowerCase().trim();
+    return allCountriesSorted.filter((c) =>
+      c.name.toLowerCase().includes(query)
+    );
+  }, [countrySearch, allCountriesSorted]);
+
+  const selectedEditCountry = COUNTRIES.find((c) => c.code === editFavoriteCountryCode);
 
   const handleOpenEdit = () => {
     soundService.triggerLightTap();
@@ -309,7 +319,11 @@ export const ProfileScreen: React.FC = () => {
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[styles.modalContent, { paddingBottom: 60 + insets.bottom }]}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Avatar Preview */}
             <View style={styles.modalAvatarPreviewWrap}>
               <View style={styles.modalAvatarBig}>
@@ -362,7 +376,18 @@ export const ProfileScreen: React.FC = () => {
             </View>
 
             {/* Favorite Country / Flag */}
-            <Text style={styles.modalSectionLabel}>PAÍS O BANDERA FAVORITA</Text>
+            <View style={styles.countryHeaderRow}>
+              <Text style={styles.modalSectionLabel}>PAÍS O BANDERA FAVORITA</Text>
+              {selectedEditCountry && (
+                <View style={styles.selectedCountryPill}>
+                  <Text style={styles.selectedCountryPillFlag}>{selectedEditCountry.flagEmoji}</Text>
+                  <Text style={styles.selectedCountryPillText} numberOfLines={1}>
+                    {selectedEditCountry.name}
+                  </Text>
+                </View>
+              )}
+            </View>
+
             <View style={styles.countrySearchWrap}>
               <Ionicons name="search" size={16} color={IOSColors.tertiaryLabel} style={{ marginRight: 8 }} />
               <TextInput
@@ -371,6 +396,7 @@ export const ProfileScreen: React.FC = () => {
                 placeholder="Buscar país..."
                 placeholderTextColor={IOSColors.tertiaryLabel}
                 style={styles.countrySearchInput}
+                autoCorrect={false}
               />
               {countrySearch.length > 0 && (
                 <Pressable onPress={() => setCountrySearch('')} hitSlop={8}>
@@ -379,35 +405,42 @@ export const ProfileScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={styles.countriesGrid}>
-              {filteredCountries.map((c) => {
-                const isSelected = editFavoriteCountryCode === c.code;
-                return (
-                  <Pressable
-                    key={c.code}
-                    onPress={() => {
-                      soundService.triggerLightTap();
-                      setEditFavoriteCountryCode(c.code);
-                    }}
-                    style={[
-                      styles.countryChip,
-                      isSelected && styles.countryChipSelected,
-                    ]}
-                  >
-                    <Text style={styles.countryChipFlag}>{c.flagEmoji}</Text>
-                    <Text
+            {filteredCountries.length === 0 ? (
+              <View style={styles.emptySearchWrap}>
+                <Ionicons name="search-outline" size={28} color={IOSColors.tertiaryLabel} />
+                <Text style={styles.emptySearchText}>No se encontraron países para "{countrySearch}"</Text>
+              </View>
+            ) : (
+              <View style={styles.countriesGrid}>
+                {filteredCountries.map((c) => {
+                  const isSelected = editFavoriteCountryCode === c.code;
+                  return (
+                    <Pressable
+                      key={c.code}
+                      onPress={() => {
+                        soundService.triggerLightTap();
+                        setEditFavoriteCountryCode(c.code);
+                      }}
                       style={[
-                        styles.countryChipName,
-                        isSelected && styles.countryChipNameSelected,
+                        styles.countryChip,
+                        isSelected && styles.countryChipSelected,
                       ]}
-                      numberOfLines={1}
                     >
-                      {c.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <Text style={styles.countryChipFlag}>{c.flagEmoji}</Text>
+                      <Text
+                        style={[
+                          styles.countryChipName,
+                          isSelected && styles.countryChipNameSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {c.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             <AppleButton
               title="Guardar Cambios"
@@ -861,11 +894,45 @@ const styles = StyleSheet.create({
     color: IOSColors.label,
     paddingVertical: 0,
   },
+  countryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  selectedCountryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  selectedCountryPillFlag: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  selectedCountryPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.systemBlue,
+    maxWidth: 130,
+  },
+  emptySearchWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+  },
+  emptySearchText: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    marginTop: 8,
+  },
   countriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    maxHeight: 180,
   },
   countryChip: {
     flexDirection: 'row',
