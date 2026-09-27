@@ -358,18 +358,15 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 disabled={isAnswered}
                 style={[styles.optionCard, cardStyle]}
               >
-                <View style={styles.optionContent}>
-                  <Text style={styles.optionEmoji}>{option.flagEmoji}</Text>
-                  <Text
-                    style={[
-                      styles.optionText,
-                      isAnswered && isCorrectOption && styles.optionTextCorrect,
-                      isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
-                    ]}
-                  >
-                    {option.name}
-                  </Text>
-                </View>
+                <Text
+                  style={[
+                    styles.optionText,
+                    isAnswered && isCorrectOption && styles.optionTextCorrect,
+                    isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
+                  ]}
+                >
+                  {option.name}
+                </Text>
                 {iconName && (
                   <Ionicons name={iconName} size={22} color={iconColor} />
                 )}
@@ -504,14 +501,6 @@ const styles = StyleSheet.create({
   optionWrong: {
     backgroundColor: 'rgba(255, 59, 48, 0.1)',
     borderColor: IOSColors.systemRed,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  optionEmoji: {
-    fontSize: 22,
-    marginRight: 12,
   },
   optionText: {
     fontSize: 17,
