@@ -32,6 +32,7 @@ export const ProfileScreen: React.FC = () => {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState(stats.username || 'Explorador');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [editAvatar, setEditAvatar] = useState(stats.avatar || '🧭');
   const [editFavoriteCountryCode, setEditFavoriteCountryCode] = useState(stats.favoriteCountryCode || 'ec');
   const [countrySearch, setCountrySearch] = useState('');
@@ -60,6 +61,7 @@ export const ProfileScreen: React.FC = () => {
   const handleOpenEdit = () => {
     soundService.triggerLightTap();
     setEditUsername(stats.username || 'Explorador');
+    setUsernameError(null);
     setEditAvatar(stats.avatar || '🧭');
     setEditFavoriteCountryCode(stats.favoriteCountryCode || 'ec');
     setCountrySearch('');
@@ -67,9 +69,33 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleSaveEdit = async () => {
+    const trimmed = editUsername.trim();
+    if (!trimmed) {
+      soundService.triggerError();
+      setUsernameError('El nombre o apodo es obligatorio.');
+      Alert.alert(
+        'Apodo Obligatorio',
+        'Debes escribir un nombre o apodo para tu explorador antes de guardar.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
+    if (trimmed.length < 2) {
+      soundService.triggerError();
+      setUsernameError('El apodo debe tener al menos 2 caracteres.');
+      Alert.alert(
+        'Nombre muy corto',
+        'El apodo debe contener al menos 2 caracteres.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     soundService.triggerSuccess();
+    setUsernameError(null);
     await updateProfile({
-      username: editUsername.trim() || 'Explorador',
+      username: trimmed,
       avatar: editAvatar,
       favoriteCountryCode: editFavoriteCountryCode,
     });
@@ -333,12 +359,28 @@ export const ProfileScreen: React.FC = () => {
             </View>
 
             {/* Nickname Input */}
-            <Text style={styles.modalSectionLabel}>NOMBRE DE EXPLORADOR</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={20} color={IOSColors.secondaryLabel} style={{ marginRight: 10 }} />
+            <View style={styles.inputLabelRow}>
+              <Text style={styles.modalSectionLabel}>NOMBRE DE EXPLORADOR *</Text>
+              <View style={styles.mandatoryBadge}>
+                <Text style={styles.mandatoryBadgeText}>Obligatorio</Text>
+              </View>
+            </View>
+
+            <View style={[styles.inputWrapper, !!usernameError && styles.inputWrapperError]}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={usernameError ? IOSColors.systemRed : IOSColors.secondaryLabel}
+                style={{ marginRight: 10 }}
+              />
               <TextInput
                 value={editUsername}
-                onChangeText={setEditUsername}
+                onChangeText={(text) => {
+                  setEditUsername(text);
+                  if (usernameError && text.trim().length > 0) {
+                    setUsernameError(null);
+                  }
+                }}
                 placeholder="Escribe tu apodo..."
                 placeholderTextColor={IOSColors.tertiaryLabel}
                 maxLength={18}
@@ -346,11 +388,24 @@ export const ProfileScreen: React.FC = () => {
                 autoCorrect={false}
               />
               {editUsername.length > 0 && (
-                <Pressable onPress={() => setEditUsername('')} hitSlop={8}>
+                <Pressable
+                  onPress={() => {
+                    setEditUsername('');
+                    setUsernameError('El nombre o apodo es obligatorio.');
+                  }}
+                  hitSlop={8}
+                >
                   <Ionicons name="close-circle" size={18} color={IOSColors.tertiaryLabel} />
                 </Pressable>
               )}
             </View>
+
+            {!!usernameError && (
+              <View style={styles.errorMessageRow}>
+                <Ionicons name="alert-circle" size={14} color={IOSColors.systemRed} style={{ marginRight: 5 }} />
+                <Text style={styles.errorMessageText}>{usernameError}</Text>
+              </View>
+            )}
 
             {/* Avatar Selector Grid */}
             <Text style={styles.modalSectionLabel}>ELIGE TU AVATAR</Text>
@@ -839,6 +894,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 6,
   },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  mandatoryBadge: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  mandatoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: IOSColors.systemRed,
+    letterSpacing: 0.2,
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -847,6 +921,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  inputWrapperError: {
+    borderColor: IOSColors.systemRed,
+    backgroundColor: 'rgba(255, 59, 48, 0.06)',
+    marginBottom: 8,
+  },
+  errorMessageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -2,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  errorMessageText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: IOSColors.systemRed,
   },
   modalInput: {
     flex: 1,
