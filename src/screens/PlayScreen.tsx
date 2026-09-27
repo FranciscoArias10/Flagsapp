@@ -82,7 +82,11 @@ export const PlayScreen: React.FC = () => {
         {/* User Mini Progress Strip */}
         <AppleCard style={styles.userStrip} shadowLevel="small">
           <View style={styles.userStripRow}>
+            <View style={styles.userAvatarWrap}>
+              <Text style={styles.userAvatarEmoji}>{stats.avatar || '🧭'}</Text>
+            </View>
             <View style={styles.userStripMeta}>
+              <Text style={styles.userGreeting}>¡Hola, {stats.username || 'Explorador'}!</Text>
               <Text style={styles.userStripLevel}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
               <Text style={styles.userStripSub}>
                 {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para subir de nivel` : '¡Nivel Legendario!'}
@@ -263,13 +267,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  userAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  userAvatarEmoji: {
+    fontSize: 22,
+  },
   userStripMeta: {
     flex: 1,
   },
-  userStripLevel: {
-    fontSize: 15,
-    fontWeight: '700',
+  userGreeting: {
+    fontSize: 16,
+    fontWeight: '800',
     color: IOSColors.label,
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  userStripLevel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: IOSColors.systemPurple,
     marginBottom: 2,
   },
   userStripSub: {

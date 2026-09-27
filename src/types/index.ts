@@ -44,6 +44,9 @@ export interface Achievement {
 }
 
 export interface UserStats {
+  username?: string;
+  avatar?: string;
+  favoriteCountryCode?: string;
   xp: number;
   level: number;
   title: string;

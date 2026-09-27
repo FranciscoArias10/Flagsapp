@@ -45,6 +45,9 @@ export const getLevelInfo = (xp: number) => {
 };
 
 const INITIAL_STATS: UserStats = {
+  username: 'Explorador',
+  avatar: '🧭',
+  favoriteCountryCode: 'ec',
   xp: 0,
   level: 1,
   title: 'Turista Curioso',
@@ -65,6 +68,7 @@ interface GameContextType {
   isLoading: boolean;
   recordAnswer: (isCorrect: boolean) => void;
   recordQuizResult: (result: QuizResult, continent?: string, mode?: string) => void;
+  updateProfile: (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => Promise<void>;
   toggleSound: () => void;
   toggleHaptics: () => void;
   resetProgress: () => Promise<void>;
@@ -235,6 +239,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateProfile = async (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => {
+    setStats((prev) => {
+      const updated = {
+        ...prev,
+        username: profile.username.trim() || 'Explorador',
+        avatar: profile.avatar || '🧭',
+        favoriteCountryCode: profile.favoriteCountryCode,
+      };
+      persistData(updated, achievements);
+      return updated;
+    });
+  };
+
   const resetProgress = async () => {
     setStats(INITIAL_STATS);
     setAchievements(INITIAL_ACHIEVEMENTS);
@@ -254,6 +271,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         recordAnswer,
         recordQuizResult,
+        updateProfile,
         toggleSound,
         toggleHaptics,
         resetProgress,
