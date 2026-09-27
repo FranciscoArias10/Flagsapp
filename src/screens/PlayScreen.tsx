@@ -62,8 +62,9 @@ export const PlayScreen: React.FC = () => {
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
       <AppleHeader
-        title="Banderas"
-        category="APRENDER & JUGAR"
+        title="Flags++"
+        category="TRIVIA & GEOGRAFÍA"
+        showLogo
         rightAccessory={
           <View style={styles.headerRight}>
             <StreakBadge streak={stats.streak} size="small" />

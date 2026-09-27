@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
@@ -10,6 +10,7 @@ interface AppleHeaderProps {
   rightAccessory?: React.ReactNode;
   onBack?: () => void;
   showBack?: boolean;
+  showLogo?: boolean;
 }
 
 export const AppleHeader: React.FC<AppleHeaderProps> = ({
@@ -18,6 +19,7 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
   rightAccessory,
   onBack,
   showBack = false,
+  showLogo = false,
 }) => {
   const handleBack = () => {
     soundService.triggerLightTap();
@@ -35,7 +37,15 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
       <View style={styles.headerRow}>
         <View style={styles.titleColumn}>
           {category && <Text style={styles.categoryText}>{category.toUpperCase()}</Text>}
-          <Text style={styles.largeTitle}>{title}</Text>
+          <View style={styles.titleRow}>
+            {showLogo && (
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.logoImage}
+              />
+            )}
+            <Text style={styles.largeTitle}>{title}</Text>
+          </View>
         </View>
         {rightAccessory && <View style={styles.rightAccessory}>{rightAccessory}</View>}
       </View>
@@ -75,6 +85,16 @@ const styles = StyleSheet.create({
     color: IOSColors.systemBlue,
     letterSpacing: 0.8,
     marginBottom: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    marginRight: 10,
   },
   largeTitle: {
     fontSize: 32,
