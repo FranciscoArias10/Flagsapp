@@ -487,7 +487,6 @@ export const ProfileScreen: React.FC = () => {
                           styles.countryChipName,
                           isSelected && styles.countryChipNameSelected,
                         ]}
-                        numberOfLines={1}
                       >
                         {c.name}
                       </Text>
@@ -1049,7 +1048,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: IOSColors.label,
-    maxWidth: 120,
   },
   countryChipNameSelected: {
     color: IOSColors.systemBlue,

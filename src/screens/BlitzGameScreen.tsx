@@ -405,7 +405,6 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                   isAnswered && isCorrect && styles.optTextCorrect,
                   isAnswered && isSelected && !isCorrect && styles.optTextWrong,
                 ]}
-                numberOfLines={1}
               >
                 {option.name}
               </Text>

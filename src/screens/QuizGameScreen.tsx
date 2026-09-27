@@ -672,6 +672,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: IOSColors.label,
+    flex: 1,
+    marginRight: 8,
   },
   optionTextCorrect: {
     color: IOSColors.systemGreen,

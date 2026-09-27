@@ -371,7 +371,7 @@ export const CapitalsGameScreen: React.FC = () => {
             },
           ]}
         >
-          <Text style={styles.questionSubtitle}>¿Cuál es la capital de...?</Text>
+          <Text style={styles.questionSubtitle}>¿Cuál es su capital?</Text>
           <Text style={styles.countryName}>{currentQ.country.name}</Text>
 
           <View style={styles.flagContainer}>
@@ -632,6 +632,8 @@ const styles = StyleSheet.create({
   choiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   choiceText: {
     fontSize: 17,
