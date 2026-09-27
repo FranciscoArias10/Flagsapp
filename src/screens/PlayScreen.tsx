@@ -272,13 +272,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   userAvatarEmoji: {
-    fontSize: 22,
+    fontSize: 28,
   },
   userStripMeta: {
     flex: 1,

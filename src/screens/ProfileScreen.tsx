@@ -425,6 +425,11 @@ export const ProfileScreen: React.FC = () => {
                     ]}
                   >
                     <Text style={styles.avatarGridEmoji}>{av}</Text>
+                    {isSelected && (
+                      <View style={styles.selectedAvatarCheck}>
+                        <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
@@ -535,15 +540,12 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderWidth: 2,
-    borderColor: 'rgba(0, 122, 255, 0.25)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    ...IOSColors.cardShadow,
   },
   avatarEmoji: {
-    fontSize: 34,
+    fontSize: 44,
   },
   editPillBadge: {
     position: 'absolute',
@@ -870,16 +872,13 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderWidth: 3,
-    borderColor: IOSColors.systemBlue,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-    ...IOSColors.cardShadow,
+    marginBottom: 8,
   },
   modalAvatarBigEmoji: {
-    fontSize: 48,
+    fontSize: 58,
   },
   modalAvatarHelp: {
     fontSize: 13,
@@ -952,24 +951,37 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
     marginBottom: 24,
+    justifyContent: 'center',
   },
   avatarGridItem: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarGridItemSelected: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderWidth: 2,
+    borderColor: IOSColors.systemBlue,
+    transform: [{ scale: 1.12 }],
+  },
+  avatarGridEmoji: {
+    fontSize: 30,
+  },
+  selectedAvatarCheck: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: IOSColors.systemBlue,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  avatarGridItemSelected: {
-    backgroundColor: 'rgba(0, 122, 255, 0.15)',
-    borderColor: IOSColors.systemBlue,
-    transform: [{ scale: 1.08 }],
-  },
-  avatarGridEmoji: {
-    fontSize: 24,
+    borderColor: '#FFFFFF',
   },
   countrySearchWrap: {
     flexDirection: 'row',
