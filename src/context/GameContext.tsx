@@ -72,6 +72,8 @@ interface GameContextType {
   toggleSound: () => void;
   toggleHaptics: () => void;
   resetProgress: () => Promise<void>;
+  exportBackupData: () => Promise<string>;
+  importBackupData: (backupJson: string) => Promise<{ success: boolean; message: string }>;
   newAchievementUnlocked: Achievement | null;
   clearAchievementNotification: () => void;
 }
@@ -259,6 +261,51 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.removeItem(ACHIEVEMENTS_KEY);
   };
 
+  const exportBackupData = async (): Promise<string> => {
+    const backup = {
+      app: 'Flags++',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      stats,
+      achievements,
+    };
+    return JSON.stringify(backup, null, 2);
+  };
+
+  const importBackupData = async (backupJson: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const data = JSON.parse(backupJson.trim());
+      if (!data || typeof data !== 'object') {
+        return { success: false, message: 'El formato no es un JSON válido.' };
+      }
+      if (!data.stats || typeof data.stats.xp !== 'number') {
+        return { success: false, message: 'El respaldo no contiene estadísticas válidas de Flags++.' };
+      }
+
+      const mergedStats: UserStats = {
+        ...INITIAL_STATS,
+        ...data.stats,
+      };
+
+      const mergedAchievements: Achievement[] = Array.isArray(data.achievements)
+        ? data.achievements
+        : INITIAL_ACHIEVEMENTS;
+
+      setStats(mergedStats);
+      setAchievements(mergedAchievements);
+      soundService.setPreferences(mergedStats.soundEnabled, mergedStats.hapticsEnabled);
+      await persistData(mergedStats, mergedAchievements);
+      soundService.triggerSuccess();
+
+      return {
+        success: true,
+        message: `¡Progreso restaurado con éxito! Bienvenido de nuevo, ${mergedStats.username || 'Explorador'} (Nivel ${mergedStats.level}, ${mergedStats.xp} XP).`,
+      };
+    } catch (e) {
+      return { success: false, message: 'No se pudo leer el archivo de respaldo. Asegúrate de copiar el texto completo.' };
+    }
+  };
+
   const clearAchievementNotification = () => {
     setNewAchievementUnlocked(null);
   };
@@ -275,6 +322,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleSound,
         toggleHaptics,
         resetProgress,
+        exportBackupData,
+        importBackupData,
         newAchievementUnlocked,
         clearAchievementNotification,
       }}

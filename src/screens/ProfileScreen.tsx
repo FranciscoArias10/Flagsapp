@@ -11,6 +11,7 @@ import {
   Pressable,
   Platform,
   StatusBar as RNStatusBar,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ const AVATARS = ['🧭', '🦁', '🚀', '🦅', '👑', '⚡', '🌍', '🦊', 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, resetProgress } = useGame();
+  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, resetProgress, exportBackupData, importBackupData } = useGame();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState(stats.username || 'Explorador');
@@ -36,6 +37,12 @@ export const ProfileScreen: React.FC = () => {
   const [editAvatar, setEditAvatar] = useState(stats.avatar || '🧭');
   const [editFavoriteCountryCode, setEditFavoriteCountryCode] = useState(stats.favoriteCountryCode || 'ec');
   const [countrySearch, setCountrySearch] = useState('');
+
+  // Backup & Restore states
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [restoreInputText, setRestoreInputText] = useState('');
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const levelInfo = getLevelInfo(stats.xp);
   const accuracy = stats.totalAnswers > 0
@@ -119,6 +126,49 @@ export const ProfileScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      soundService.triggerLightTap();
+      setIsExporting(true);
+      const jsonString = await exportBackupData();
+      await Share.share({
+        title: `Respaldo Flags++ - ${stats.username || 'Explorador'}`,
+        message: jsonString,
+      });
+      soundService.triggerSuccess();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo generar la copia de respaldo en este momento.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleOpenRestoreModal = () => {
+    soundService.triggerLightTap();
+    setRestoreInputText('');
+    setRestoreError(null);
+    setShowRestoreModal(true);
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!restoreInputText.trim()) {
+      setRestoreError('Por favor pega el código o texto del respaldo.');
+      soundService.triggerError();
+      return;
+    }
+
+    const res = await importBackupData(restoreInputText);
+    if (res.success) {
+      setShowRestoreModal(false);
+      setRestoreInputText('');
+      setRestoreError(null);
+      Alert.alert('¡Restauración Completa!', res.message, [{ text: 'Continuar' }]);
+    } else {
+      setRestoreError(res.message);
+      soundService.triggerError();
+    }
   };
 
   return (
@@ -221,29 +271,57 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Cloud Backup (Fase 2 Preview) */}
+        {/* Cloud & Local Backup */}
         <Text style={styles.sectionHeader}>CUENTA Y RESPALDO</Text>
         <AppleCard style={styles.cloudCard} shadowLevel="small">
           <View style={styles.cloudRow}>
             <View style={styles.cloudIconCircle}>
-              <Ionicons name="cloud-outline" size={24} color={IOSColors.systemBlue} />
+              <Ionicons name="cloud-done" size={24} color={IOSColors.systemBlue} />
             </View>
             <View style={styles.cloudMeta}>
               <View style={styles.cloudTitleRow}>
-                <Text style={styles.cloudTitle}>Respaldo en la Nube</Text>
-                <View style={styles.soonPill}>
-                  <Text style={styles.soonPillText}>FASE 2</Text>
+                <Text style={styles.cloudTitle}>Respaldo y Restauración</Text>
+                <View style={styles.activeBackupPill}>
+                  <Text style={styles.activeBackupPillText}>DISPONIBLE</Text>
                 </View>
               </View>
               <Text style={styles.cloudDesc}>
-                Tus datos están protegidos en este dispositivo. Próximamente podrás sincronizar tu progreso con Google sin costo.
+                Guarda una copia de tu nivel, XP, avatar y logros en Google Drive, WhatsApp o Notas, o restaura tu progreso en cualquier dispositivo.
               </Text>
             </View>
           </View>
 
+          {/* Backup Action Buttons */}
+          <View style={styles.backupActionsRow}>
+            <Pressable
+              onPress={handleExportBackup}
+              disabled={isExporting}
+              style={({ pressed }) => [
+                styles.backupBtnPrimary,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.backupBtnPrimaryText}>
+                {isExporting ? 'Generando...' : 'Crear Respaldo'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleOpenRestoreModal}
+              style={({ pressed }) => [
+                styles.backupBtnSecondary,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Ionicons name="cloud-download-outline" size={16} color={IOSColors.systemBlue} style={{ marginRight: 6 }} />
+              <Text style={styles.backupBtnSecondaryText}>Restaurar</Text>
+            </Pressable>
+          </View>
+
           <View style={styles.storageStatusRow}>
-            <Ionicons name="phone-portrait-outline" size={14} color={IOSColors.systemGreen} />
-            <Text style={styles.storageStatusText}>Modo Local Activo • Guardado en AsyncStorage</Text>
+            <Ionicons name="shield-checkmark" size={14} color={IOSColors.systemGreen} />
+            <Text style={styles.storageStatusText}>Almacenamiento seguro • Respaldable sin costo</Text>
           </View>
         </AppleCard>
 
@@ -510,6 +588,78 @@ export const ProfileScreen: React.FC = () => {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Restore Backup Modal */}
+      <Modal
+        visible={showRestoreModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowRestoreModal(false)}
+      >
+        <View style={[styles.modalContainer, { paddingTop: topInset }]}>
+          <View style={styles.modalHeader}>
+            <Pressable onPress={() => setShowRestoreModal(false)} hitSlop={10}>
+              <Text style={styles.modalCancelText}>Cancelar</Text>
+            </Pressable>
+            <Text style={styles.modalTitle}>Restaurar Datos</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={[styles.modalContent, { paddingBottom: 40 + insets.bottom }]}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.restoreHeaderIconWrap}>
+              <View style={styles.restoreIconCircleBig}>
+                <Ionicons name="cloud-download" size={36} color={IOSColors.systemBlue} />
+              </View>
+              <Text style={styles.restorePromptTitle}>Recupera tu Progreso</Text>
+              <Text style={styles.restorePromptSub}>
+                Pega a continuación el texto o JSON del respaldo que guardaste previamente:
+              </Text>
+            </View>
+
+            <TextInput
+              value={restoreInputText}
+              onChangeText={(txt) => {
+                setRestoreInputText(txt);
+                if (restoreError) setRestoreError(null);
+              }}
+              placeholder='Pega aquí el código JSON del respaldo (ej: {"app":"Flags++", ...})'
+              placeholderTextColor={IOSColors.tertiaryLabel}
+              multiline
+              numberOfLines={6}
+              style={[styles.restoreInputArea, !!restoreError && styles.inputWrapperError]}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+
+            {restoreInputText.length > 0 && (
+              <Pressable
+                onPress={() => setRestoreInputText('')}
+                style={styles.clearRestoreBtn}
+              >
+                <Ionicons name="trash-outline" size={14} color={IOSColors.secondaryLabel} />
+                <Text style={styles.clearRestoreBtnText}>Limpiar texto</Text>
+              </Pressable>
+            )}
+
+            {!!restoreError && (
+              <View style={[styles.errorMessageRow, { marginTop: 10 }]}>
+                <Ionicons name="alert-circle" size={16} color={IOSColors.systemRed} style={{ marginRight: 6 }} />
+                <Text style={styles.errorMessageText}>{restoreError}</Text>
+              </View>
+            )}
+
+            <AppleButton
+              title="Validar y Restaurar"
+              onPress={handleConfirmRestore}
+              variant="gradient"
+              style={{ marginTop: 24, width: '100%' }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -726,22 +876,109 @@ const styles = StyleSheet.create({
     color: IOSColors.label,
     marginRight: 8,
   },
-  soonPill: {
-    backgroundColor: 'rgba(0, 122, 255, 0.12)',
-    paddingHorizontal: 6,
+  activeBackupPill: {
+    backgroundColor: 'rgba(52, 199, 89, 0.12)',
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  soonPillText: {
+  activeBackupPillText: {
     fontSize: 10,
     fontWeight: '800',
-    color: IOSColors.systemBlue,
+    color: IOSColors.systemGreen,
     letterSpacing: 0.5,
   },
   cloudDesc: {
     fontSize: 13,
     color: IOSColors.secondaryLabel,
     lineHeight: 18,
+  },
+  backupActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  backupBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: IOSColors.systemBlue,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    ...IOSColors.buttonShadow,
+  },
+  backupBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  backupBtnSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+  },
+  backupBtnSecondaryText: {
+    color: IOSColors.systemBlue,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  restoreHeaderIconWrap: {
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  restoreIconCircleBig: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  restorePromptTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 6,
+  },
+  restorePromptSub: {
+    fontSize: 14,
+    color: IOSColors.secondaryLabel,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
+  },
+  restoreInputArea: {
+    backgroundColor: 'rgba(118, 118, 128, 0.08)',
+    borderRadius: 16,
+    padding: 14,
+    minHeight: 120,
+    fontSize: 13,
+    color: IOSColors.label,
+    textAlignVertical: 'top',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  clearRestoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    gap: 4,
+  },
+  clearRestoreBtnText: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '600',
   },
   storageStatusRow: {
     flexDirection: 'row',

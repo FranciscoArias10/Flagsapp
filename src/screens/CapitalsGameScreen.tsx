@@ -63,15 +63,27 @@ export const CapitalsGameScreen: React.FC = () => {
     startNewRound();
   }, []);
 
-  const generateCapitalQuestions = (count = 10): CapitalQuestion[] => {
-    const shuffled = [...COUNTRIES].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, count);
+  const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
+  const continentFilters = ['Todos', 'América', 'Europa', 'Asia', 'África', 'Oceanía'];
+
+  const generateCapitalQuestions = (count = 10, continent = selectedContinent): CapitalQuestion[] => {
+    const pool = continent === 'Todos'
+      ? COUNTRIES
+      : COUNTRIES.filter((c) => c.continent === continent);
+    const countToPick = Math.min(count, pool.length);
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, countToPick);
 
     return selected.map((country) => {
-      // Pick 3 distractors from other capitals
-      const otherCapitals = COUNTRIES
+      const sameContinentCapitals = pool
         .filter((c) => c.capital !== country.capital)
-        .map((c) => c.capital)
+        .map((c) => c.capital);
+      const fallbackCapitals = COUNTRIES
+        .filter((c) => c.capital !== country.capital)
+        .map((c) => c.capital);
+      const distractorPool = sameContinentCapitals.length >= 3 ? sameContinentCapitals : fallbackCapitals;
+
+      const otherCapitals = distractorPool
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
 
@@ -85,14 +97,14 @@ export const CapitalsGameScreen: React.FC = () => {
     });
   };
 
-  const startNewRound = () => {
+  const startNewRound = (continent = selectedContinent) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    const qs = generateCapitalQuestions(10);
+    const qs = generateCapitalQuestions(10, continent);
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -105,6 +117,13 @@ export const CapitalsGameScreen: React.FC = () => {
     setShowConfetti(false);
     setShowReviewModal(false);
     animateCard();
+  };
+
+  const handleSelectContinent = (cont: string) => {
+    if (cont === selectedContinent) return;
+    soundService.triggerSelection();
+    setSelectedContinent(cont);
+    startNewRound(cont);
   };
 
   const animateCard = () => {
@@ -222,7 +241,7 @@ export const CapitalsGameScreen: React.FC = () => {
       stars,
     };
 
-    recordQuizResult(result, undefined, 'capitals');
+    recordQuizResult(result, selectedContinent !== 'Todos' ? selectedContinent : undefined, 'capitals');
     setShowSummary(true);
 
     if (stars >= 2) {
@@ -245,7 +264,7 @@ export const CapitalsGameScreen: React.FC = () => {
       <View style={[styles.container, { paddingTop: topInset, paddingBottom: 85 + insets.bottom }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryWrap}>
-          <Text style={styles.summaryPretitle}>MODO CAPITALES</Text>
+          <Text style={styles.summaryPretitle}>MODO CAPITALES • {selectedContinent.toUpperCase()}</Text>
           <Text style={styles.summaryTitle}>
             {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
           </Text>
@@ -324,8 +343,8 @@ export const CapitalsGameScreen: React.FC = () => {
           </Pressable>
 
           <AppleButton
-            title="Nueva Ronda de Capitales"
-            onPress={startNewRound}
+            title={selectedContinent === 'Todos' ? 'Nueva Ronda de Capitales' : `Nueva Ronda (${selectedContinent})`}
+            onPress={() => startNewRound(selectedContinent)}
             variant="gradient"
             style={{ width: '100%' }}
           />
@@ -335,7 +354,7 @@ export const CapitalsGameScreen: React.FC = () => {
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title="Recuento de Capitales"
+          title={`Recuento de Capitales (${selectedContinent})`}
         />
       </View>
     );
@@ -355,6 +374,33 @@ export const CapitalsGameScreen: React.FC = () => {
           </Text>
         </View>
         <StreakBadge streak={streak} size="small" />
+      </View>
+
+      {/* Continent Filter Chips */}
+      <View style={styles.chipsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
+          {continentFilters.map((filter) => {
+            const isSelected = selectedContinent === filter;
+            return (
+              <Pressable
+                key={filter}
+                onPress={() => handleSelectContinent(filter)}
+                style={[
+                  styles.chip,
+                  isSelected && styles.chipActive,
+                ]}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                  {filter}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -558,6 +604,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: IOSColors.tertiaryLabel,
     marginTop: 6,
+  },
+  chipsContainer: {
+    paddingVertical: 6,
+    marginBottom: 6,
+  },
+  chipsScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    ...IOSColors.cardShadow,
+  },
+  chipActive: {
+    backgroundColor: IOSColors.systemPurple,
+    borderColor: IOSColors.systemPurple,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: IOSColors.secondaryLabel,
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
   },
   scrollContent: {
     paddingHorizontal: 20,
