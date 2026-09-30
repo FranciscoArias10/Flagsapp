@@ -301,7 +301,9 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           </Pressable>
           <View style={styles.diffHeaderTitleWrap}>
             <Text style={styles.diffPretitle}>MODO CONTRARRELOJ</Text>
-            <Text style={styles.diffTitle}>Desafío Blitz ⚡</Text>
+            <Text style={styles.diffTitle} numberOfLines={1} adjustsFontSizeToFit>
+              Desafío Blitz
+            </Text>
           </View>
           <View style={{ width: 32 }} />
         </View>
@@ -344,15 +346,17 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                   </LinearGradient>
 
                   <View style={styles.diffCardHeadText}>
-                    <View style={styles.diffTitleLine}>
-                      <Text style={styles.diffCardTitle}>{diff.title}</Text>
-                      <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
-                        <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
-                          {diff.tag}
-                        </Text>
-                      </View>
+                    <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
+                      <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
+                        {diff.tag}
+                      </Text>
                     </View>
-                    <Text style={styles.diffCardSubtitle}>{diff.subtitle}</Text>
+                    <Text style={styles.diffCardTitle} numberOfLines={1} adjustsFontSizeToFit>
+                      {diff.title}
+                    </Text>
+                    <Text style={styles.diffCardSubtitle} numberOfLines={1}>
+                      {diff.subtitle}
+                    </Text>
                   </View>
                 </View>
 
@@ -688,27 +692,25 @@ const styles = StyleSheet.create({
   },
   diffCardHeadText: {
     flex: 1,
-  },
-  diffTitleLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 3,
-  },
-  diffCardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: IOSColors.label,
+    justifyContent: 'center',
   },
   diffTagBadge: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    marginBottom: 4,
   },
   diffTagBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  diffCardTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 2,
   },
   diffCardSubtitle: {
     fontSize: 13,

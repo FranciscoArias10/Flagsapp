@@ -30,6 +30,7 @@ export type CapitalDifficulty = 'easy' | 'medium' | 'hard' | 'all';
 export interface CapitalDifficultyConfig {
   key: CapitalDifficulty;
   title: string;
+  shortName: string;
   subtitle: string;
   description: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,6 +47,7 @@ export const CAPITALS_DIFFICULTIES: Record<CapitalDifficulty, CapitalDifficultyC
   easy: {
     key: 'easy',
     title: 'Nivel Fácil (Principiante)',
+    shortName: 'Fácil',
     subtitle: 'Capitales populares y emblemáticas',
     description: 'Ideal para comenzar y dominar las capitales más conocidas.',
     icon: 'leaf',
@@ -60,6 +62,7 @@ export const CAPITALS_DIFFICULTIES: Record<CapitalDifficulty, CapitalDifficultyC
   medium: {
     key: 'medium',
     title: 'Nivel Intermedio (Desafío)',
+    shortName: 'Intermedio',
     subtitle: 'Capitales moderadas de los 5 continentes',
     description: 'Un buen reto con capitales que pondrán a prueba tu memoria.',
     icon: 'school',
@@ -74,6 +77,7 @@ export const CAPITALS_DIFFICULTIES: Record<CapitalDifficulty, CapitalDifficultyC
   hard: {
     key: 'hard',
     title: 'Nivel Experto (Hardcore)',
+    shortName: 'Experto',
     subtitle: 'Capitales remotas, islas y países exóticos',
     description: 'Solo para verdaderos maestros de la geografía mundial.',
     icon: 'flame',
@@ -88,6 +92,7 @@ export const CAPITALS_DIFFICULTIES: Record<CapitalDifficulty, CapitalDifficultyC
   all: {
     key: 'all',
     title: 'Todas las Capitales (Mixto)',
+    shortName: 'Todas',
     subtitle: 'Catálogo global con los 126 países',
     description: 'Preguntas aleatorias de todos los niveles y continentes combinados.',
     icon: 'earth',
@@ -391,17 +396,19 @@ export const CapitalsGameScreen: React.FC = () => {
       <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         {/* Header bar */}
         <View style={styles.diffHeaderBar}>
-          <View style={styles.diffHeaderTitleWrap}>
+          <View style={styles.diffHeaderTopRow}>
             <Text style={styles.diffPretitle}>TRIVIA & APRENDIZAJE</Text>
-            <Text style={styles.diffTitle}>Capitales del Mundo 🏛️</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <StreakBadge streak={stats.streak} size="small" />
-            <View style={styles.xpPill}>
-              <Ionicons name="sparkles" size={13} color={IOSColors.systemPurple} />
-              <Text style={styles.xpPillText}>{stats.xp} XP</Text>
+            <View style={styles.headerRight}>
+              <StreakBadge streak={stats.streak} size="small" />
+              <View style={styles.xpPill}>
+                <Ionicons name="sparkles" size={13} color={IOSColors.systemPurple} />
+                <Text style={styles.xpPillText}>{stats.xp} XP</Text>
+              </View>
             </View>
           </View>
+          <Text style={styles.diffTitle} numberOfLines={1} adjustsFontSizeToFit>
+            Capitales del Mundo
+          </Text>
         </View>
 
         <ScrollView
@@ -475,15 +482,17 @@ export const CapitalsGameScreen: React.FC = () => {
                   </LinearGradient>
 
                   <View style={styles.diffCardHeadText}>
-                    <View style={styles.diffTitleLine}>
-                      <Text style={styles.diffCardTitle}>{diff.title}</Text>
-                      <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
-                        <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
-                          {diff.tag}
-                        </Text>
-                      </View>
+                    <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
+                      <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
+                        {diff.tag}
+                      </Text>
                     </View>
-                    <Text style={styles.diffCardSubtitle}>{diff.subtitle}</Text>
+                    <Text style={styles.diffCardTitle} numberOfLines={1} adjustsFontSizeToFit>
+                      {diff.title}
+                    </Text>
+                    <Text style={styles.diffCardSubtitle} numberOfLines={1}>
+                      {diff.subtitle}
+                    </Text>
                   </View>
                 </View>
 
@@ -536,7 +545,7 @@ export const CapitalsGameScreen: React.FC = () => {
           >
             <Ionicons name={currentDiffConfig.icon} size={15} color={currentDiffConfig.color} />
             <Text style={[styles.diffBadgeGameOverText, { color: currentDiffConfig.color }]}>
-              DIFICULTAD: {currentDiffConfig.title.toUpperCase()}
+              DIFICULTAD: {currentDiffConfig.shortName.toUpperCase()}
             </Text>
           </View>
 
@@ -595,7 +604,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
           <View style={styles.summaryActions}>
             <AppleButton
-              title={selectedContinent === 'Todos' ? `Jugar de Nuevo (${currentDiffConfig.title.split(' ')[1] || 'Ronda'})` : `Jugar de Nuevo (${selectedContinent})`}
+              title={selectedContinent === 'Todos' ? `Jugar de Nuevo (${currentDiffConfig.shortName})` : `Jugar de Nuevo (${selectedContinent})`}
               onPress={() => startNewRound(selectedContinent, selectedDifficulty, selectedQuestionCount)}
               variant="gradient"
               style={{ width: '100%', marginBottom: 8 }}
@@ -684,7 +693,7 @@ export const CapitalsGameScreen: React.FC = () => {
           >
             <Ionicons name={currentDiffConfig.icon} size={13} color={currentDiffConfig.color} />
             <Text style={[styles.activeDiffText, { color: currentDiffConfig.color }]}>
-              {currentDiffConfig.title.split(' ')[1] || currentDiffConfig.title}
+              {currentDiffConfig.shortName}
             </Text>
             <Ionicons name="chevron-down" size={12} color={currentDiffConfig.color} />
           </Pressable>
@@ -1232,26 +1241,27 @@ const styles = StyleSheet.create({
   },
   // Difficulty Selection Styles
   diffHeaderBar: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  diffHeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  diffHeaderTitleWrap: {
-    flex: 1,
+    marginBottom: 4,
   },
   diffPretitle: {
     fontSize: 11,
     fontWeight: '800',
     color: IOSColors.systemPurple,
     letterSpacing: 1.4,
-    marginBottom: 2,
   },
   diffTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '900',
     color: IOSColors.label,
+    letterSpacing: -0.4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1306,36 +1316,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   diffIconGradient: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   diffCardHeadText: {
     flex: 1,
-  },
-  diffTitleLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 3,
-  },
-  diffCardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: IOSColors.label,
+    justifyContent: 'center',
   },
   diffTagBadge: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    marginBottom: 4,
   },
   diffTagBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  diffCardTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: IOSColors.label,
+    marginBottom: 2,
   },
   diffCardSubtitle: {
     fontSize: 13,
