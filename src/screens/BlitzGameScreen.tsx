@@ -127,36 +127,39 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const bonusAnim = useRef(new Animated.Value(0)).current;
   const [bonusText, setBonusText] = useState<string | null>(null);
 
-  // Timer interval
+  // Timer interval (pure countdown)
   useEffect(() => {
     if (screenMode !== 'playing') return;
-
-    if (timeLeft <= 0) {
-      handleGameOver();
-      return;
-    }
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
-          handleGameOver();
           return 0;
-        }
-        const urgentThreshold = selectedDifficulty === 'hard' ? 3 : 5;
-        if (prev <= urgentThreshold) {
-          // Heartbeat pulse when time is running low
-          Animated.sequence([
-            Animated.timing(timerScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
-            Animated.timing(timerScale, { toValue: 1, duration: 100, useNativeDriver: true }),
-          ]).start();
-          soundService.triggerLightTap();
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
+  }, [screenMode]);
+
+  // Handle game over safely in an effect hook (avoids updating GameProvider during render)
+  useEffect(() => {
+    if (screenMode !== 'playing') return;
+
+    if (timeLeft <= 0) {
+      handleGameOver();
+    } else {
+      const urgentThreshold = selectedDifficulty === 'hard' ? 3 : 5;
+      if (timeLeft <= urgentThreshold) {
+        // Heartbeat pulse when time is running low
+        Animated.sequence([
+          Animated.timing(timerScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
+          Animated.timing(timerScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+        ]).start();
+        soundService.triggerLightTap();
+      }
+    }
   }, [screenMode, timeLeft, selectedDifficulty]);
 
   const generateNextQuestion = () => {

@@ -84,10 +84,13 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     startNewGame(initialQuestionCount, initialTimeLimit);
   }, [continent, initialQuestionCount, initialTimeLimit]);
 
-  // Question countdown timer effect
+  // Question countdown timer interval (pure state update only)
   useEffect(() => {
     if (questions.length === 0 || showSummary || isAnswered) {
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
       return;
     }
 
@@ -97,21 +100,36 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     questionTimerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          if (questionTimerRef.current) clearInterval(questionTimerRef.current);
-          handleTimeout();
           return 0;
-        }
-        if (prev <= 4) {
-          soundService.triggerLightTap();
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => {
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
     };
   }, [currentIndex, questions.length, showSummary, isAnswered, questionTimeLimit]);
+
+  // Handle timeout safely in an effect hook (avoids updating GameProvider during render)
+  useEffect(() => {
+    if (questions.length === 0 || showSummary || isAnswered) {
+      return;
+    }
+
+    if (timeLeft === 0) {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      handleTimeout();
+    } else if (timeLeft <= 4 && timeLeft > 0) {
+      soundService.triggerLightTap();
+    }
+  }, [timeLeft, isAnswered, questions.length, showSummary]);
 
   const startNewGame = (countParam = questionCount, timeParam = questionTimeLimit) => {
     if (autoAdvanceTimer.current) {
@@ -559,18 +577,40 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           </View>
         </Animated.View>
 
+        {/* Timeout Loss Warning Banner */}
+        {isAnswered && selectedOptionIndex === null && (
+          <View style={styles.timeoutBanner}>
+            <View style={styles.timeoutBannerIconWrap}>
+              <Ionicons name="timer" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.timeoutBannerTextWrap}>
+              <Text style={styles.timeoutBannerTitle}>¡Tiempo Agotado! (0 pts)</Text>
+              <Text style={styles.timeoutBannerSubtitle}>
+                Perdiste este turno por no responder a tiempo.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Options List */}
         <View style={styles.optionsContainer}>
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOptionIndex === idx;
             const isCorrectOption = idx === currentQ.correctOptionIndex;
+            const isTimeout = isAnswered && selectedOptionIndex === null;
 
-            let cardStyle = styles.optionNormal;
+            let cardStyle: any = styles.optionNormal;
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
             let iconColor = IOSColors.secondaryLabel;
 
             if (isAnswered) {
-              if (isCorrectOption) {
+              if (isTimeout) {
+                if (isCorrectOption) {
+                  cardStyle = styles.optionTimeoutReveal;
+                } else {
+                  cardStyle = styles.optionDimmed;
+                }
+              } else if (isCorrectOption) {
                 cardStyle = styles.optionCorrect;
                 iconName = 'checkmark-circle';
                 iconColor = IOSColors.systemGreen;
@@ -591,15 +631,22 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 <Text
                   style={[
                     styles.optionText,
-                    isAnswered && isCorrectOption && styles.optionTextCorrect,
+                    isAnswered && !isTimeout && isCorrectOption && styles.optionTextCorrect,
                     isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
+                    isTimeout && isCorrectOption && styles.optionTextTimeoutReveal,
+                    isTimeout && !isCorrectOption && styles.optionTextDimmed,
                   ]}
                 >
                   {option.name}
                 </Text>
-                {iconName && (
+                {isTimeout && isCorrectOption ? (
+                  <View style={styles.timeoutAnswerBadge}>
+                    <Ionicons name="information-circle" size={13} color="#D97706" />
+                    <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
+                  </View>
+                ) : !isTimeout && iconName ? (
                   <Ionicons name={iconName} size={22} color={iconColor} />
-                )}
+                ) : null}
               </Pressable>
             );
           })}
@@ -635,28 +682,42 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     styles.flashCircle,
                     {
                       backgroundColor:
-                        selectedOptionIndex === currentQ.correctOptionIndex
+                        selectedOptionIndex === null
+                          ? 'rgba(255, 59, 48, 0.14)'
+                          : selectedOptionIndex === currentQ.correctOptionIndex
                           ? 'rgba(52, 199, 89, 0.12)'
                           : 'rgba(255, 149, 0, 0.12)',
                     },
                   ]}
                 >
                   <Ionicons
-                    name="flash"
+                    name={selectedOptionIndex === null ? 'timer-outline' : 'flash'}
                     size={14}
                     color={
-                      selectedOptionIndex === currentQ.correctOptionIndex
+                      selectedOptionIndex === null
+                        ? IOSColors.systemRed
+                        : selectedOptionIndex === currentQ.correctOptionIndex
                         ? IOSColors.systemGreen
                         : IOSColors.systemOrange
                     }
                   />
                 </View>
                 <View style={styles.autoAdvanceTextWrap}>
-                  <Text style={styles.autoAdvanceTitle} numberOfLines={1}>
-                    {currentIndex + 1 < questions.length ? 'Siguiente Pregunta' : 'Ver Resultados'}
+                  <Text
+                    style={[
+                      styles.autoAdvanceTitle,
+                      selectedOptionIndex === null && { color: IOSColors.systemRed },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {selectedOptionIndex === null
+                      ? 'Tiempo Agotado'
+                      : currentIndex + 1 < questions.length
+                      ? 'Siguiente Pregunta'
+                      : 'Ver Resultados'}
                   </Text>
                   <Text style={styles.autoAdvanceSubtitle} numberOfLines={1}>
-                    Avanzando automáticamente
+                    {selectedOptionIndex === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
                   </Text>
                 </View>
               </View>
@@ -837,6 +898,14 @@ const styles = StyleSheet.create({
     borderColor: IOSColors.systemRed,
     elevation: 2,
   },
+  optionTimeoutReveal: {
+    backgroundColor: 'rgba(255, 149, 0, 0.08)',
+    borderColor: '#FF9500',
+    borderWidth: 1.5,
+  },
+  optionDimmed: {
+    opacity: 0.45,
+  },
   optionText: {
     fontSize: 17,
     fontWeight: '600',
@@ -849,6 +918,61 @@ const styles = StyleSheet.create({
   },
   optionTextWrong: {
     color: IOSColors.systemRed,
+  },
+  optionTextTimeoutReveal: {
+    color: '#D97706',
+    fontWeight: '700',
+  },
+  optionTextDimmed: {
+    color: IOSColors.tertiaryLabel,
+  },
+  timeoutBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+    ...IOSColors.cardShadow,
+  },
+  timeoutBannerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  timeoutBannerTextWrap: {
+    flex: 1,
+  },
+  timeoutBannerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  timeoutBannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  timeoutAnswerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  timeoutAnswerBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#D97706',
+    marginLeft: 3,
   },
   factContainer: {
     backgroundColor: '#FFFFFF',

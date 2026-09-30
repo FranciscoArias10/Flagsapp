@@ -164,10 +164,13 @@ export const CapitalsGameScreen: React.FC = () => {
     };
   }, []);
 
-  // Per-question countdown timer effect
+  // Per-question countdown timer interval (pure state update only)
   useEffect(() => {
     if (questions.length === 0 || showSummary || isAnswered || screenMode !== 'playing') {
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
       return;
     }
 
@@ -177,21 +180,36 @@ export const CapitalsGameScreen: React.FC = () => {
     questionTimerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          if (questionTimerRef.current) clearInterval(questionTimerRef.current);
-          handleTimeout();
           return 0;
-        }
-        if (prev <= 4) {
-          soundService.triggerLightTap();
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => {
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
     };
   }, [currentIndex, questions.length, showSummary, isAnswered, screenMode, questionTimeLimit]);
+
+  // Handle timeout safely in an effect hook (avoids updating GameProvider during render)
+  useEffect(() => {
+    if (screenMode !== 'playing' || questions.length === 0 || showSummary || isAnswered) {
+      return;
+    }
+
+    if (timeLeft === 0) {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      handleTimeout();
+    } else if (timeLeft <= 4 && timeLeft > 0) {
+      soundService.triggerLightTap();
+    }
+  }, [timeLeft, isAnswered, screenMode, questions.length, showSummary]);
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
@@ -839,18 +857,40 @@ export const CapitalsGameScreen: React.FC = () => {
           </View>
         </Animated.View>
 
+        {/* Timeout Loss Warning Banner */}
+        {isAnswered && selectedCapital === null && (
+          <View style={styles.timeoutBanner}>
+            <View style={styles.timeoutBannerIconWrap}>
+              <Ionicons name="timer" size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.timeoutBannerTextWrap}>
+              <Text style={styles.timeoutBannerTitle}>¡Tiempo Agotado! (0 pts)</Text>
+              <Text style={styles.timeoutBannerSubtitle}>
+                Perdiste este turno por no responder a tiempo.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Capital Choices */}
         <View style={styles.choicesList}>
           {currentQ.options.map((cap) => {
             const isSelected = selectedCapital === cap;
             const isCorrect = cap === currentQ.correctCapital;
+            const isTimeout = isAnswered && selectedCapital === null;
 
-            let cardStyle = styles.choiceNormal;
+            let cardStyle: any = styles.choiceNormal;
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
             let iconColor = IOSColors.secondaryLabel;
 
             if (isAnswered) {
-              if (isCorrect) {
+              if (isTimeout) {
+                if (isCorrect) {
+                  cardStyle = styles.choiceTimeoutReveal;
+                } else {
+                  cardStyle = styles.choiceDimmed;
+                }
+              } else if (isCorrect) {
                 cardStyle = styles.choiceCorrect;
                 iconName = 'checkmark-circle';
                 iconColor = IOSColors.systemGreen;
@@ -873,10 +913,14 @@ export const CapitalsGameScreen: React.FC = () => {
                     name="business-outline"
                     size={20}
                     color={
-                      isAnswered && isCorrect
+                      isAnswered && !isTimeout && isCorrect
                         ? IOSColors.systemGreen
                         : isAnswered && isSelected
                         ? IOSColors.systemRed
+                        : isTimeout && isCorrect
+                        ? '#D97706'
+                        : isTimeout
+                        ? IOSColors.tertiaryLabel
                         : IOSColors.systemPurple
                     }
                     style={{ marginRight: 12 }}
@@ -884,14 +928,23 @@ export const CapitalsGameScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.choiceText,
-                      isAnswered && isCorrect && styles.textCorrect,
+                      isAnswered && !isTimeout && isCorrect && styles.textCorrect,
                       isAnswered && isSelected && !isCorrect && styles.textWrong,
+                      isTimeout && isCorrect && styles.textTimeoutReveal,
+                      isTimeout && !isCorrect && styles.textDimmed,
                     ]}
                   >
                     {cap}
                   </Text>
                 </View>
-                {iconName && <Ionicons name={iconName} size={22} color={iconColor} />}
+                {isTimeout && isCorrect ? (
+                  <View style={styles.timeoutAnswerBadge}>
+                    <Ionicons name="information-circle" size={13} color="#D97706" />
+                    <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
+                  </View>
+                ) : !isTimeout && iconName ? (
+                  <Ionicons name={iconName} size={22} color={iconColor} />
+                ) : null}
               </Pressable>
             );
           })}
@@ -924,28 +977,42 @@ export const CapitalsGameScreen: React.FC = () => {
                     styles.flashCircle,
                     {
                       backgroundColor:
-                        selectedCapital === currentQ.correctCapital
+                        selectedCapital === null
+                          ? 'rgba(255, 59, 48, 0.14)'
+                          : selectedCapital === currentQ.correctCapital
                           ? 'rgba(52, 199, 89, 0.12)'
                           : 'rgba(255, 149, 0, 0.12)',
                     },
                   ]}
                 >
                   <Ionicons
-                    name="flash"
+                    name={selectedCapital === null ? 'timer-outline' : 'flash'}
                     size={14}
                     color={
-                      selectedCapital === currentQ.correctCapital
+                      selectedCapital === null
+                        ? IOSColors.systemRed
+                        : selectedCapital === currentQ.correctCapital
                         ? IOSColors.systemGreen
                         : IOSColors.systemOrange
                     }
                   />
                 </View>
                 <View style={styles.autoAdvanceTextWrap}>
-                  <Text style={styles.autoAdvanceTitle} numberOfLines={1}>
-                    {currentIndex + 1 < questions.length ? 'Siguiente Capital' : 'Ver Puntuación'}
+                  <Text
+                    style={[
+                      styles.autoAdvanceTitle,
+                      selectedCapital === null && { color: IOSColors.systemRed },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {selectedCapital === null
+                      ? 'Tiempo Agotado'
+                      : currentIndex + 1 < questions.length
+                      ? 'Siguiente Capital'
+                      : 'Ver Puntuación'}
                   </Text>
                   <Text style={styles.autoAdvanceSubtitle} numberOfLines={1}>
-                    Avanzando automáticamente
+                    {selectedCapital === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
                   </Text>
                 </View>
               </View>
@@ -1135,6 +1202,14 @@ const styles = StyleSheet.create({
     borderColor: IOSColors.systemRed,
     elevation: 2,
   },
+  choiceTimeoutReveal: {
+    backgroundColor: 'rgba(255, 149, 0, 0.08)',
+    borderColor: '#FF9500',
+    borderWidth: 1.5,
+  },
+  choiceDimmed: {
+    opacity: 0.45,
+  },
   choiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1151,6 +1226,61 @@ const styles = StyleSheet.create({
   },
   textWrong: {
     color: IOSColors.systemRed,
+  },
+  textTimeoutReveal: {
+    color: '#D97706',
+    fontWeight: '700',
+  },
+  textDimmed: {
+    color: IOSColors.tertiaryLabel,
+  },
+  timeoutBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+    ...IOSColors.cardShadow,
+  },
+  timeoutBannerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  timeoutBannerTextWrap: {
+    flex: 1,
+  },
+  timeoutBannerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  timeoutBannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  timeoutAnswerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  timeoutAnswerBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#D97706',
+    marginLeft: 3,
   },
   factCard: {
     backgroundColor: '#FFFFFF',
