@@ -27,6 +27,13 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 - [ ] **Modo Oscuro Completo (Dark Mode)**:
   - Sincronización del tema oscuro del sistema para jugar en entornos nocturnos.
 
+### 🌐 Internacionalización y Soporte Multi-idioma (i18n)
+- [ ] **Soporte de Idioma Inglés y Detección Automática**:
+  - Detectar el idioma del dispositivo mediante `expo-localization`.
+  - Diccionario de textos de interfaz (UI: botones, pestañas, modales, alertas y estadísticas).
+  - Traducción de nombres de países, continentes y capitales en el motor de preguntas y Atlas.
+  - Opción manual en la pantalla de Perfil para alternar entre Español e Inglés.
+
 ---
 
 ## ✅ Tareas Completadas
