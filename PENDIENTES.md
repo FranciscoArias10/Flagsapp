@@ -16,8 +16,14 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
 
 ### 🎮 Experiencia de Juego (Gameplay)
+- [ ] **Selector de Cantidad de Preguntas (Maratón / Partida Rápida)**:
+  - Permitir al jugador elegir el número de preguntas antes de empezar en todos los modos (ej. 10, 20, 50, 100 o *"Todos"*).
+  - Adaptar la barra de progreso, cálculo de estrellas y bonificación proporcional de XP según la duración elegida.
+- [ ] **Sistema de Baraja Inteligente sin Repeticiones (Zero Duplicates Engine)**:
+  - Garantizar que ni en Banderas ni en Capitales se repita ninguna pregunta o país dentro de la misma ronda.
+  - Memoria de preguntas recientes para que en partidas consecutivas se prioricen países que el jugador aún no ha visto hasta agotar el grupo/continente seleccionado.
 - [ ] **Logros Adicionales (Achievements)**:
-  - Nuevas medallas desbloqueables (ej. *"Conquistador de África"*, *"Experto en Oceanía"*, *"Maestro del Blitz 5s"*, *"Racha de 25"*).
+  - Nuevas medallas desbloqueables (ej. *"Conquistador de África"*, *"Experto en Oceanía"*, *"Maestro del Blitz 5s"*, *"Racha de 25"*, *"Maratón de 100"*).
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto).
 
