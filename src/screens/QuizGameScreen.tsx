@@ -26,12 +26,14 @@ import { useGame } from '../context/GameContext';
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
   initialQuestionCount?: number | 'all';
+  initialTimeLimit?: number;
   onClose: () => void;
 }
 
 export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   continent = 'Mundo',
   initialQuestionCount = 10,
+  initialTimeLimit = 15,
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
@@ -39,6 +41,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const { recordAnswer, recordQuizResult } = useGame();
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
+  const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(initialTimeLimit);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
@@ -51,8 +54,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  const QUESTION_TIME_LIMIT = 15;
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
+  const [timeLeft, setTimeLeft] = useState(initialTimeLimit);
   const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -77,8 +79,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   }, []);
 
   useEffect(() => {
-    startNewGame();
-  }, [continent]);
+    setQuestionCount(initialQuestionCount);
+    setQuestionTimeLimit(initialTimeLimit);
+    startNewGame(initialQuestionCount, initialTimeLimit);
+  }, [continent, initialQuestionCount, initialTimeLimit]);
 
   // Question countdown timer effect
   useEffect(() => {
@@ -87,7 +91,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       return;
     }
 
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(questionTimeLimit);
     if (questionTimerRef.current) clearInterval(questionTimerRef.current);
 
     questionTimerRef.current = setInterval(() => {
@@ -107,9 +111,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     return () => {
       if (questionTimerRef.current) clearInterval(questionTimerRef.current);
     };
-  }, [currentIndex, questions.length, showSummary, isAnswered]);
+  }, [currentIndex, questions.length, showSummary, isAnswered, questionTimeLimit]);
 
-  const startNewGame = (countParam = questionCount) => {
+  const startNewGame = (countParam = questionCount, timeParam = questionTimeLimit) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
@@ -120,7 +124,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(timeParam);
     const targetCount = countParam === 'all' ? 999 : countParam;
     const generated = generateQuizQuestions(targetCount, continent, 'flag_to_name');
     setQuestions(generated);
@@ -286,7 +290,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(questionTimeLimit);
 
     soundService.triggerLightTap();
 

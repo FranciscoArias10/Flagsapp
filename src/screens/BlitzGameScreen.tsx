@@ -22,6 +22,7 @@ import { AppleButton } from '../components/AppleButton';
 import { StreakBadge } from '../components/StreakBadge';
 import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
+import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
 
 interface BlitzQuestion {
@@ -108,6 +109,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BlitzDifficulty>('medium');
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | 'all'>(10);
+  const [pendingBlitzDiff, setPendingBlitzDiff] = useState<BlitzDifficultyConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(10);
   const [currentQ, setCurrentQ] = useState<BlitzQuestion | null>(null);
   const [score, setScore] = useState(0);
@@ -179,15 +181,18 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     setBonusText(text);
     bonusAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(bonusAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.delay(400),
+      Animated.timing(bonusAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.delay(600),
       Animated.timing(bonusAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start();
   };
 
-  const startBlitzWithDifficulty = (diff: BlitzDifficulty) => {
+  const startBlitzWithDifficulty = (diff: BlitzDifficulty, countParam?: number | 'all') => {
     soundService.triggerSelection();
     setSelectedDifficulty(diff);
+    if (countParam !== undefined) {
+      setSelectedQuestionCount(countParam);
+    }
     setTimeLeft(BLITZ_DIFFICULTIES[diff].seconds);
     setScore(0);
     setStreak(0);
@@ -330,39 +335,6 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             Selecciona tu nivel de adrenalina. Cada acierto suma segundos al reloj, pero cada error te restará tiempo:
           </Text>
 
-          {/* Question Count Selection Strip */}
-          <View style={styles.blitzCountBox}>
-            <View style={styles.blitzCountHeader}>
-              <Text style={styles.blitzCountTitle}>PREGUNTAS POR PARTIDA</Text>
-              <Text style={styles.blitzCountSub}>
-                {selectedQuestionCount === 'all' ? 'Todo el Catálogo' : `${selectedQuestionCount} Preguntas`}
-              </Text>
-            </View>
-            <View style={styles.blitzCountChips}>
-              {([10, 20, 50, 'all'] as const).map((cnt) => {
-                const isSel = selectedQuestionCount === cnt;
-                const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
-                return (
-                  <Pressable
-                    key={String(cnt)}
-                    onPress={() => {
-                      soundService.triggerSelection();
-                      setSelectedQuestionCount(cnt);
-                    }}
-                    style={[
-                      styles.blitzCountChip,
-                      isSel && styles.blitzCountChipActive,
-                    ]}
-                  >
-                    <Text style={[styles.blitzCountChipText, isSel && styles.blitzCountChipTextActive]}>
-                      {lbl}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
           {/* Cards for each difficulty */}
           {(Object.keys(BLITZ_DIFFICULTIES) as BlitzDifficulty[]).map((key) => {
             const diff = BLITZ_DIFFICULTIES[key];
@@ -372,7 +344,10 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             return (
               <Pressable
                 key={diff.key}
-                onPress={() => startBlitzWithDifficulty(diff.key)}
+                onPress={() => {
+                  soundService.triggerMediumTap();
+                  setPendingBlitzDiff(diff);
+                }}
                 style={({ pressed }) => [
                   styles.diffCard,
                   isFeatured && styles.diffCardFeatured,
@@ -446,6 +421,28 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             </Text>
           </View>
         </ScrollView>
+
+        {/* Game Start Settings Modal */}
+        {pendingBlitzDiff && (
+          <GameStartModal
+            visible={pendingBlitzDiff !== null}
+            onClose={() => setPendingBlitzDiff(null)}
+            onStart={(count) => {
+              const targetKey = pendingBlitzDiff.key;
+              setPendingBlitzDiff(null);
+              startBlitzWithDifficulty(targetKey, count);
+            }}
+            title={`Blitz ${pendingBlitzDiff.title}`}
+            subtitle={pendingBlitzDiff.subtitle}
+            icon={pendingBlitzDiff.icon}
+            color={pendingBlitzDiff.color}
+            gradient={pendingBlitzDiff.gradient}
+            initialCount={selectedQuestionCount}
+            initialTime={pendingBlitzDiff.seconds}
+            showTimeSelector={false}
+            totalAvailable={COUNTRIES.length}
+          />
+        )}
       </View>
     );
   }
@@ -1059,57 +1056,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: IOSColors.secondaryLabel,
-  },
-  blitzCountBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    ...IOSColors.cardShadow,
-  },
-  blitzCountHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  blitzCountTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: IOSColors.secondaryLabel,
-    letterSpacing: 0.8,
-  },
-  blitzCountSub: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FF3B30',
-  },
-  blitzCountChips: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  blitzCountChip: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  blitzCountChipActive: {
-    backgroundColor: '#FF3B30',
-    borderColor: '#FF3B30',
-  },
-  blitzCountChipText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: IOSColors.label,
-  },
-  blitzCountChipTextActive: {
-    color: '#FFFFFF',
   },
 });

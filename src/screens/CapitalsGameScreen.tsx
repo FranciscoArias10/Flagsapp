@@ -23,6 +23,7 @@ import { AppleButton } from '../components/AppleButton';
 import { StreakBadge } from '../components/StreakBadge';
 import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
+import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
 
 export type CapitalDifficulty = 'easy' | 'medium' | 'hard' | 'all';
@@ -145,8 +146,9 @@ export const CapitalsGameScreen: React.FC = () => {
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  const QUESTION_TIME_LIMIT = 15;
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
+  const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(15);
+  const [pendingDifficulty, setPendingDifficulty] = useState<CapitalDifficultyConfig | null>(null);
+  const [timeLeft, setTimeLeft] = useState(questionTimeLimit);
   const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -169,7 +171,7 @@ export const CapitalsGameScreen: React.FC = () => {
       return;
     }
 
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(questionTimeLimit);
     if (questionTimerRef.current) clearInterval(questionTimerRef.current);
 
     questionTimerRef.current = setInterval(() => {
@@ -189,7 +191,7 @@ export const CapitalsGameScreen: React.FC = () => {
     return () => {
       if (questionTimerRef.current) clearInterval(questionTimerRef.current);
     };
-  }, [currentIndex, questions.length, showSummary, isAnswered, screenMode]);
+  }, [currentIndex, questions.length, showSummary, isAnswered, screenMode, questionTimeLimit]);
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
@@ -256,7 +258,8 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const startNewRound = (
     difficulty = selectedDifficulty,
-    count = selectedQuestionCount
+    count = selectedQuestionCount,
+    timeLimit = questionTimeLimit
   ) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
@@ -268,7 +271,7 @@ export const CapitalsGameScreen: React.FC = () => {
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(timeLimit);
     const qs = generateCapitalQuestions(count, difficulty);
     setQuestions(qs);
     setCurrentIndex(0);
@@ -286,9 +289,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const handleStartWithDifficulty = (diffKey: CapitalDifficulty) => {
     soundService.triggerMediumTap();
-    setSelectedDifficulty(diffKey);
-    startNewRound(diffKey, selectedQuestionCount);
-    setScreenMode('playing');
+    setPendingDifficulty(CAPITALS_DIFFICULTIES[diffKey]);
   };
 
   const animateCard = () => {
@@ -428,7 +429,7 @@ export const CapitalsGameScreen: React.FC = () => {
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    setTimeLeft(QUESTION_TIME_LIMIT);
+    setTimeLeft(questionTimeLimit);
 
     soundService.triggerLightTap();
 
@@ -513,39 +514,6 @@ export const CapitalsGameScreen: React.FC = () => {
             Selecciona un nivel de dificultad para poner a prueba tu conocimiento geográfico:
           </Text>
 
-          {/* Question Count Selection Strip */}
-          <View style={styles.capitalsCountBox}>
-            <View style={styles.capitalsCountHeader}>
-              <Text style={styles.capitalsCountTitle}>PREGUNTAS POR PARTIDA</Text>
-              <Text style={styles.capitalsCountSub}>
-                {selectedQuestionCount === 'all' ? 'Todo el Catálogo' : `${selectedQuestionCount} Preguntas`}
-              </Text>
-            </View>
-            <View style={styles.capitalsCountChips}>
-              {([10, 20, 50, 'all'] as const).map((cnt) => {
-                const isSel = selectedQuestionCount === cnt;
-                const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
-                return (
-                  <Pressable
-                    key={String(cnt)}
-                    onPress={() => {
-                      soundService.triggerSelection();
-                      setSelectedQuestionCount(cnt);
-                    }}
-                    style={[
-                      styles.capitalsCountChip,
-                      isSel && styles.capitalsCountChipActive,
-                    ]}
-                  >
-                    <Text style={[styles.capitalsCountChipText, isSel && styles.capitalsCountChipTextActive]}>
-                      {lbl}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
           {/* Cards for each difficulty */}
           {(Object.keys(CAPITALS_DIFFICULTIES) as CapitalDifficulty[]).map((key) => {
             const diff = CAPITALS_DIFFICULTIES[key];
@@ -616,6 +584,32 @@ export const CapitalsGameScreen: React.FC = () => {
             );
           })}
         </ScrollView>
+
+        {/* Game Start Settings Modal */}
+        {pendingDifficulty && (
+          <GameStartModal
+            visible={pendingDifficulty !== null}
+            onClose={() => setPendingDifficulty(null)}
+            onStart={(count, timeLimit) => {
+              setSelectedQuestionCount(count);
+              setQuestionTimeLimit(timeLimit);
+              const targetDiff = pendingDifficulty.key;
+              setSelectedDifficulty(targetDiff);
+              setPendingDifficulty(null);
+              startNewRound(targetDiff, count, timeLimit);
+              setScreenMode('playing');
+            }}
+            title={pendingDifficulty.title}
+            subtitle={pendingDifficulty.subtitle}
+            icon={pendingDifficulty.icon}
+            color={pendingDifficulty.color}
+            gradient={pendingDifficulty.gradient}
+            initialCount={selectedQuestionCount}
+            initialTime={questionTimeLimit}
+            showTimeSelector={true}
+            totalAvailable={pendingDifficulty.key === 'all' ? COUNTRIES.length : undefined}
+          />
+        )}
       </View>
     );
   }
@@ -1532,58 +1526,6 @@ const styles = StyleSheet.create({
   summaryActions: {
     width: '100%',
     marginTop: 6,
-  },
-  capitalsCountBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    ...IOSColors.cardShadow,
-  },
-  capitalsCountHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  capitalsCountTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: IOSColors.secondaryLabel,
-    letterSpacing: 0.8,
-  },
-  capitalsCountSub: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: IOSColors.systemPurple,
-  },
-  capitalsCountChips: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  capitalsCountChip: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  capitalsCountChipActive: {
-    backgroundColor: IOSColors.systemPurple,
-    borderColor: IOSColors.systemPurple,
-  },
-  capitalsCountChipText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: IOSColors.label,
-  },
-  capitalsCountChipTextActive: {
-    color: '#FFFFFF',
   },
   summaryCountRow: {
     width: '100%',

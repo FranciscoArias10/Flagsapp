@@ -21,6 +21,7 @@ import { AppleHeader } from '../components/AppleHeader';
 import { AppleCard } from '../components/AppleCard';
 import { StreakBadge } from '../components/StreakBadge';
 import { ProgressBar } from '../components/ProgressBar';
+import { GameStartModal } from '../components/GameStartModal';
 import { QuizGameScreen } from './QuizGameScreen';
 import { BlitzGameScreen } from './BlitzGameScreen';
 
@@ -33,10 +34,42 @@ export const PlayScreen: React.FC = () => {
   const [activeQuizContinent, setActiveQuizContinent] = useState<Continent | 'Mundo' | null>(null);
   const [showBlitzModal, setShowBlitzModal] = useState(false);
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | 'all'>(10);
+  const [activeQuizTimeLimit, setActiveQuizTimeLimit] = useState<number>(15);
+
+  const [selectedQuizTarget, setSelectedQuizTarget] = useState<{
+    continent: Continent | 'Mundo';
+    title: string;
+    subtitle: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    color: string;
+    gradient: [string, string];
+    totalCount: number;
+  } | null>(null);
 
   const handleStartQuiz = (continent: Continent | 'Mundo') => {
     soundService.triggerLightTap();
-    setActiveQuizContinent(continent);
+    if (continent === 'Mundo') {
+      setSelectedQuizTarget({
+        continent: 'Mundo',
+        title: 'Todo el Mundo',
+        subtitle: 'Todos los continentes combinados',
+        icon: 'earth',
+        color: '#007AFF',
+        gradient: ['#007AFF', '#5856D6'],
+        totalCount: 126,
+      });
+    } else {
+      const found = CONTINENTS.find((c) => c.name === continent);
+      setSelectedQuizTarget({
+        continent,
+        title: continent,
+        subtitle: `${found?.count || 0} Países de ${continent}`,
+        icon: (found?.icon as any) || 'globe-outline',
+        color: found?.color || '#007AFF',
+        gradient: [found?.color || '#007AFF', '#5856D6'],
+        totalCount: found?.count || 50,
+      });
+    }
   };
 
   const handleStartBlitz = () => {
@@ -130,37 +163,6 @@ export const PlayScreen: React.FC = () => {
           </LinearGradient>
         </Pressable>
 
-        {/* Question Count Selection Strip */}
-        <View style={styles.countSelectorHeader}>
-          <Text style={styles.sectionTitle}>PREGUNTAS POR RONDA</Text>
-          <Text style={styles.countSelectedSub}>
-            {selectedQuestionCount === 'all' ? 'Todo el Catálogo' : `${selectedQuestionCount} Preguntas`}
-          </Text>
-        </View>
-        <View style={styles.countSelectorRow}>
-          {([10, 20, 50, 'all'] as const).map((cnt) => {
-            const isSelected = selectedQuestionCount === cnt;
-            const label = cnt === 'all' ? 'Todas' : `${cnt}`;
-            return (
-              <Pressable
-                key={String(cnt)}
-                onPress={() => {
-                  soundService.triggerSelection();
-                  setSelectedQuestionCount(cnt);
-                }}
-                style={[
-                  styles.countChip,
-                  isSelected && styles.countChipActive,
-                ]}
-              >
-                <Text style={[styles.countChipText, isSelected && styles.countChipTextActive]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
         {/* Global Explorer Mode Card */}
         <Text style={styles.sectionTitle}>MODO GLOBAL</Text>
         <Pressable
@@ -184,7 +186,7 @@ export const PlayScreen: React.FC = () => {
             </View>
             <View style={styles.globalFooter}>
               <Text style={styles.globalQuestionCount}>
-                {selectedQuestionCount === 'all' ? '126 Preguntas (Catálogo Completo)' : `${selectedQuestionCount} Preguntas Variadas`}
+                126 Países • Personaliza tiempo y preguntas
               </Text>
               <Ionicons name="play-circle" size={32} color="#FFFFFF" />
             </View>
@@ -232,6 +234,30 @@ export const PlayScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      {/* Game Start Settings Modal (Questions & Time per mode) */}
+      {selectedQuizTarget && (
+        <GameStartModal
+          visible={selectedQuizTarget !== null}
+          onClose={() => setSelectedQuizTarget(null)}
+          onStart={(count, timeLimit) => {
+            setSelectedQuestionCount(count);
+            setActiveQuizTimeLimit(timeLimit);
+            const targetContinent = selectedQuizTarget.continent;
+            setSelectedQuizTarget(null);
+            setActiveQuizContinent(targetContinent);
+          }}
+          title={selectedQuizTarget.title}
+          subtitle={selectedQuizTarget.subtitle}
+          icon={selectedQuizTarget.icon}
+          color={selectedQuizTarget.color}
+          gradient={selectedQuizTarget.gradient}
+          initialCount={selectedQuestionCount}
+          initialTime={activeQuizTimeLimit}
+          showTimeSelector={true}
+          totalAvailable={selectedQuizTarget.totalCount}
+        />
+      )}
+
       {/* Main Quiz Game Modal */}
       <Modal
         visible={activeQuizContinent !== null}
@@ -243,6 +269,7 @@ export const PlayScreen: React.FC = () => {
           <QuizGameScreen
             continent={activeQuizContinent}
             initialQuestionCount={selectedQuestionCount}
+            initialTimeLimit={activeQuizTimeLimit}
             onClose={() => setActiveQuizContinent(null)}
           />
         )}
@@ -504,45 +531,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginRight: 2,
-  },
-  countSelectorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 22,
-    marginBottom: 8,
-  },
-  countSelectedSub: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: IOSColors.systemBlue,
-  },
-  countSelectorRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  countChip: {
-    flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    ...IOSColors.cardShadow,
-  },
-  countChipActive: {
-    backgroundColor: IOSColors.systemBlue,
-    borderColor: IOSColors.systemBlue,
-  },
-  countChipText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: IOSColors.label,
-  },
-  countChipTextActive: {
-    color: '#FFFFFF',
   },
 });
