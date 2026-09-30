@@ -10,6 +10,7 @@ import {
   StatusBar as RNStatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizResult, AnswerReviewItem } from '../types';
 import { COUNTRIES } from '../data/countries';
@@ -24,6 +25,82 @@ import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
 
+export type CapitalDifficulty = 'easy' | 'medium' | 'hard' | 'all';
+
+export interface CapitalDifficultyConfig {
+  key: CapitalDifficulty;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  gradient: [string, string];
+  tag: string;
+  tagBg: string;
+  tagColor: string;
+  countryCount: number;
+  examples: string;
+}
+
+export const CAPITALS_DIFFICULTIES: Record<CapitalDifficulty, CapitalDifficultyConfig> = {
+  easy: {
+    key: 'easy',
+    title: 'Nivel Fácil (Principiante)',
+    subtitle: 'Capitales populares y emblemáticas',
+    description: 'Ideal para comenzar y dominar las capitales más conocidas.',
+    icon: 'leaf',
+    color: '#34C759',
+    gradient: ['#34C759', '#30B0C7'],
+    tag: 'NIVEL 1 • 33 PAÍSES',
+    tagBg: 'rgba(52, 199, 89, 0.15)',
+    tagColor: '#34C759',
+    countryCount: 33,
+    examples: 'Madrid, París, Tokio, Londres, Roma, Buenos Aires, Bogotá, México...',
+  },
+  medium: {
+    key: 'medium',
+    title: 'Nivel Intermedio (Desafío)',
+    subtitle: 'Capitales moderadas de los 5 continentes',
+    description: 'Un buen reto con capitales que pondrán a prueba tu memoria.',
+    icon: 'school',
+    color: '#FF9500',
+    gradient: ['#FF9500', '#FFCC00'],
+    tag: 'NIVEL 2 • 75 PAÍSES',
+    tagBg: 'rgba(255, 149, 0, 0.15)',
+    tagColor: '#FF9500',
+    countryCount: 75,
+    examples: 'Canberra, Ottawa, Ankara, Helsinki, Oslo, Varsovia, Bangkok, Seúl...',
+  },
+  hard: {
+    key: 'hard',
+    title: 'Nivel Experto (Hardcore)',
+    subtitle: 'Capitales remotas, islas y países exóticos',
+    description: 'Solo para verdaderos maestros de la geografía mundial.',
+    icon: 'flame',
+    color: '#FF3B30',
+    gradient: ['#FF3B30', '#AF52DE'],
+    tag: 'NIVEL 3 • 18 PAÍSES',
+    tagBg: 'rgba(255, 59, 48, 0.15)',
+    tagColor: '#FF3B30',
+    countryCount: 18,
+    examples: 'Palikir, Ngerulmud, Nukualofa, Astaná, Yamusukro, Port Vila...',
+  },
+  all: {
+    key: 'all',
+    title: 'Todas las Capitales (Mixto)',
+    subtitle: 'Catálogo global con los 126 países',
+    description: 'Preguntas aleatorias de todos los niveles y continentes combinados.',
+    icon: 'earth',
+    color: '#007AFF',
+    gradient: ['#007AFF', '#5856D6'],
+    tag: 'GLOBAL • 126 PAÍSES',
+    tagBg: 'rgba(0, 122, 255, 0.15)',
+    tagColor: '#007AFF',
+    countryCount: 126,
+    examples: 'Desafío completo con todo el catálogo mundial de Flags++.',
+  },
+};
+
 interface CapitalQuestion {
   country: Country;
   options: string[]; // 4 capital choices
@@ -33,7 +110,12 @@ interface CapitalQuestion {
 export const CapitalsGameScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult } = useGame();
+  const { recordAnswer, recordQuizResult, stats } = useGame();
+
+  const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<CapitalDifficulty>('easy');
+  const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
+  const continentFilters = ['Todos', 'América', 'Europa', 'Asia', 'África', 'Oceanía'];
 
   const [questions, setQuestions] = useState<CapitalQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,17 +141,28 @@ export const CapitalsGameScreen: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    startNewRound();
-  }, []);
+  const generateCapitalQuestions = (
+    count = 10,
+    continent = selectedContinent,
+    difficulty = selectedDifficulty
+  ): CapitalQuestion[] => {
+    let pool = COUNTRIES;
+    if (continent !== 'Todos') {
+      pool = pool.filter((c) => c.continent === continent);
+    }
 
-  const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
-  const continentFilters = ['Todos', 'América', 'Europa', 'Asia', 'África', 'Oceanía'];
+    if (difficulty !== 'all') {
+      const targetDiff = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
+      const filtered = pool.filter((c) => c.difficulty === targetDiff);
+      if (filtered.length >= 4) {
+        pool = filtered;
+      } else {
+        // Fallback: if continent + diff has too few countries, take all countries of that difficulty
+        const allWithDiff = COUNTRIES.filter((c) => c.difficulty === targetDiff);
+        pool = allWithDiff.length >= 4 ? allWithDiff : pool;
+      }
+    }
 
-  const generateCapitalQuestions = (count = 10, continent = selectedContinent): CapitalQuestion[] => {
-    const pool = continent === 'Todos'
-      ? COUNTRIES
-      : COUNTRIES.filter((c) => c.continent === continent);
     const countToPick = Math.min(count, pool.length);
     const shuffled = [...pool].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, countToPick);
@@ -97,14 +190,17 @@ export const CapitalsGameScreen: React.FC = () => {
     });
   };
 
-  const startNewRound = (continent = selectedContinent) => {
+  const startNewRound = (
+    continent = selectedContinent,
+    difficulty = selectedDifficulty
+  ) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    const qs = generateCapitalQuestions(10, continent);
+    const qs = generateCapitalQuestions(10, continent, difficulty);
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -119,11 +215,18 @@ export const CapitalsGameScreen: React.FC = () => {
     animateCard();
   };
 
+  const handleStartWithDifficulty = (diffKey: CapitalDifficulty) => {
+    soundService.triggerMediumTap();
+    setSelectedDifficulty(diffKey);
+    startNewRound(selectedContinent, diffKey);
+    setScreenMode('playing');
+  };
+
   const handleSelectContinent = (cont: string) => {
     if (cont === selectedContinent) return;
     soundService.triggerSelection();
     setSelectedContinent(cont);
-    startNewRound(cont);
+    startNewRound(cont, selectedDifficulty);
   };
 
   const animateCard = () => {
@@ -250,8 +353,100 @@ export const CapitalsGameScreen: React.FC = () => {
     }
   };
 
+  // 1. DIFFICULTY SELECTION SCREEN
+  if (screenMode === 'difficulty_select') {
+    return (
+      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        {/* Header bar */}
+        <View style={styles.diffHeaderBar}>
+          <View style={styles.diffHeaderTitleWrap}>
+            <Text style={styles.diffPretitle}>TRIVIA & APRENDIZAJE</Text>
+            <Text style={styles.diffTitle}>Capitales del Mundo 🏛️</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <StreakBadge streak={stats.streak} size="small" />
+            <View style={styles.xpPill}>
+              <Ionicons name="sparkles" size={13} color={IOSColors.systemPurple} />
+              <Text style={styles.xpPillText}>{stats.xp} XP</Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.diffScroll}
+          contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 100 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.diffSubtitle}>
+            Selecciona un nivel de dificultad para poner a prueba tu conocimiento geográfico en rondas de 10 preguntas:
+          </Text>
+
+          {/* Cards for each difficulty */}
+          {(Object.keys(CAPITALS_DIFFICULTIES) as CapitalDifficulty[]).map((key) => {
+            const diff = CAPITALS_DIFFICULTIES[key];
+            const isFeatured = key === 'medium';
+            const isHard = key === 'hard';
+
+            return (
+              <Pressable
+                key={diff.key}
+                onPress={() => handleStartWithDifficulty(diff.key)}
+                style={({ pressed }) => [
+                  styles.diffCard,
+                  isFeatured && styles.diffCardFeatured,
+                  isHard && styles.diffCardHard,
+                  pressed && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                {/* Header row */}
+                <View style={styles.diffCardTopRow}>
+                  <LinearGradient
+                    colors={diff.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.diffIconGradient}
+                  >
+                    <Ionicons name={diff.icon} size={22} color="#FFFFFF" />
+                  </LinearGradient>
+
+                  <View style={styles.diffCardHeadText}>
+                    <View style={styles.diffTitleLine}>
+                      <Text style={styles.diffCardTitle}>{diff.title}</Text>
+                      <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
+                        <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
+                          {diff.tag}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.diffCardSubtitle}>{diff.subtitle}</Text>
+                  </View>
+                </View>
+
+                {/* Description and Examples */}
+                <Text style={styles.diffDescText}>{diff.description}</Text>
+                <View style={styles.diffExamplesBox}>
+                  <Text style={styles.diffExamplesLabel}>EJEMPLOS:</Text>
+                  <Text style={styles.diffExamplesText}>{diff.examples}</Text>
+                </View>
+
+                {/* Bottom CTA bar */}
+                <View style={styles.diffCardBottomBar}>
+                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>Toca para comenzar</Text>
+                  <View style={[styles.diffArrowCircle, { backgroundColor: diff.color }]}>
+                    <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+                  </View>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
   if (questions.length === 0) return null;
 
+  const currentDiffConfig = CAPITALS_DIFFICULTIES[selectedDifficulty];
   const currentQ = questions[currentIndex];
   const progress = (currentIndex + 1) / questions.length;
 
@@ -264,6 +459,22 @@ export const CapitalsGameScreen: React.FC = () => {
       <View style={[styles.container, { paddingTop: topInset, paddingBottom: 85 + insets.bottom }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryWrap}>
+          {/* Difficulty Badge */}
+          <View
+            style={[
+              styles.diffBadgeGameOver,
+              {
+                borderColor: `${currentDiffConfig.color}40`,
+                backgroundColor: `${currentDiffConfig.color}15`,
+              },
+            ]}
+          >
+            <Ionicons name={currentDiffConfig.icon} size={15} color={currentDiffConfig.color} />
+            <Text style={[styles.diffBadgeGameOverText, { color: currentDiffConfig.color }]}>
+              DIFICULTAD: {currentDiffConfig.title.toUpperCase()}
+            </Text>
+          </View>
+
           <Text style={styles.summaryPretitle}>MODO CAPITALES • {selectedContinent.toUpperCase()}</Text>
           <Text style={styles.summaryTitle}>
             {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
@@ -317,12 +528,24 @@ export const CapitalsGameScreen: React.FC = () => {
             </View>
           </View>
 
-          <AppleButton
-            title={selectedContinent === 'Todos' ? 'Nueva Ronda de Capitales' : `Nueva Ronda (${selectedContinent})`}
-            onPress={() => startNewRound(selectedContinent)}
-            variant="gradient"
-            style={{ width: '100%' }}
-          />
+          <View style={styles.summaryActions}>
+            <AppleButton
+              title={selectedContinent === 'Todos' ? `Jugar de Nuevo (${currentDiffConfig.title.split(' ')[1] || 'Ronda'})` : `Jugar de Nuevo (${selectedContinent})`}
+              onPress={() => startNewRound(selectedContinent, selectedDifficulty)}
+              variant="gradient"
+              style={{ width: '100%', marginBottom: 10 }}
+            />
+            <AppleButton
+              title="Cambiar Dificultad"
+              onPress={() => {
+                soundService.triggerLightTap();
+                setShowSummary(false);
+                setScreenMode('difficulty_select');
+              }}
+              variant="secondary"
+              style={{ width: '100%' }}
+            />
+          </View>
         </View>
 
         <ReviewAnswersModal
@@ -338,17 +561,52 @@ export const CapitalsGameScreen: React.FC = () => {
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.topHeader}>
+        <View style={styles.headerControlRow}>
+          <Pressable
+            onPress={() => {
+              soundService.triggerLightTap();
+              setScreenMode('difficulty_select');
+            }}
+            style={styles.backBtn}
+            hitSlop={10}
+          >
+            <Ionicons name="arrow-back" size={20} color={IOSColors.label} />
+            <Text style={styles.backBtnText}>Niveles</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              soundService.triggerLightTap();
+              setScreenMode('difficulty_select');
+            }}
+            style={[
+              styles.activeDiffBadge,
+              {
+                borderColor: `${currentDiffConfig.color}40`,
+                backgroundColor: `${currentDiffConfig.color}15`,
+              },
+            ]}
+          >
+            <Ionicons name={currentDiffConfig.icon} size={13} color={currentDiffConfig.color} />
+            <Text style={[styles.activeDiffText, { color: currentDiffConfig.color }]}>
+              {currentDiffConfig.title.split(' ')[1] || currentDiffConfig.title}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={currentDiffConfig.color} />
+          </Pressable>
+
+          <StreakBadge streak={streak} size="small" />
+        </View>
+
         <View style={styles.progressContainer}>
           <ProgressBar
             progress={progress}
             height={8}
-            gradientColors={['#AF52DE', '#5856D6']}
+            gradientColors={currentDiffConfig.gradient}
           />
           <Text style={styles.questionCounter}>
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
-        <StreakBadge streak={streak} size="small" />
       </View>
 
       {/* Continent Filter Chips */}
@@ -876,5 +1134,216 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  // Difficulty Selection Styles
+  diffHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  diffHeaderTitleWrap: {
+    flex: 1,
+  },
+  diffPretitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: IOSColors.systemPurple,
+    letterSpacing: 1.4,
+    marginBottom: 2,
+  },
+  diffTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: IOSColors.label,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  xpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(175, 82, 222, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  xpPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: IOSColors.systemPurple,
+    marginLeft: 4,
+  },
+  diffScroll: {
+    flex: 1,
+  },
+  diffScrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  diffSubtitle: {
+    fontSize: 14,
+    color: IOSColors.secondaryLabel,
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  diffCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    ...IOSColors.cardShadow,
+  },
+  diffCardFeatured: {
+    borderColor: 'rgba(255, 149, 0, 0.45)',
+    borderWidth: 2,
+  },
+  diffCardHard: {
+    borderColor: 'rgba(255, 59, 48, 0.4)',
+  },
+  diffCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  diffIconGradient: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  diffCardHeadText: {
+    flex: 1,
+  },
+  diffTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  diffCardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  diffTagBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  diffTagBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  diffCardSubtitle: {
+    fontSize: 13,
+    color: IOSColors.secondaryLabel,
+    fontWeight: '500',
+  },
+  diffDescText: {
+    fontSize: 13,
+    color: IOSColors.label,
+    marginTop: 12,
+    lineHeight: 18,
+  },
+  diffExamplesBox: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  diffExamplesLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: IOSColors.tertiaryLabel,
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  diffExamplesText: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    fontStyle: 'italic',
+  },
+  diffCardBottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  diffCardPlayText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  diffArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerControlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  backBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: IOSColors.label,
+  },
+  activeDiffBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  activeDiffText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  diffBadgeGameOver: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1.5,
+    marginBottom: 10,
+  },
+  diffBadgeGameOverText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  summaryActions: {
+    width: '100%',
+    marginTop: 6,
   },
 });
