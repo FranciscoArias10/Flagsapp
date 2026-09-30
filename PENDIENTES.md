@@ -38,6 +38,10 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Selector y Niveles de Dificultad en Modo Capitales**:
+  - Pantalla inicial con 4 niveles de dificultad: *Fácil (Nivel 1 • 33 países)*, *Intermedio (Nivel 2 • 75 países)*, *Experto (Nivel 3 • 18 países)* y *Todas las Capitales (Modo Global • 126 países)*.
+  - Filtrado dinámico de preguntas y distractores según la dificultad y el continente seleccionado.
+  - Badge de dificultad en cabecera durante la partida y botón de *"Cambiar Dificultad"* en la pantalla de resumen.
 - [x] **Ampliación del Catálogo de Países (Dataset Global: 69 ➔ 126 países)**
   - Expandido a 126 países cubriendo todos los continentes (Europa: 39, América: 29, Asia: 28, África: 20, Oceanía: 10).
   - Incluye códigos ISO para FlagCDN, capitales verificadas, banderas emoji, datos curiosos en español y niveles de dificultad (1, 2 y 3).
