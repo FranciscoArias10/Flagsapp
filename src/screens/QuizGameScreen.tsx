@@ -331,31 +331,6 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             </View>
           </View>
 
-          {/* Dedicated Review Details Row */}
-          <Pressable
-            onPress={() => {
-              soundService.triggerLightTap();
-              setShowReviewModal(true);
-            }}
-            style={({ pressed }) => [
-              styles.reviewRowCard,
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            <View style={styles.reviewRowLeft}>
-              <View style={styles.reviewIconCircle}>
-                <Ionicons name="clipboard-outline" size={20} color={IOSColors.systemBlue} />
-              </View>
-              <View style={styles.reviewRowMeta}>
-                <Text style={styles.reviewRowTitle}>Recuento de Respuestas</Text>
-                <Text style={styles.reviewRowSubtitle}>
-                  Toca para revisar tus {score} aciertos y {questions.length - score} fallos
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={IOSColors.tertiaryLabel} />
-          </Pressable>
-
           {/* Action Buttons */}
           <View style={styles.summaryActions}>
             <AppleButton
@@ -874,47 +849,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
-  },
-  // Review Row Card in Summary
-  reviewRowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    width: '100%',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.15)',
-    ...IOSColors.cardShadow,
-  },
-  reviewRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  reviewIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  reviewRowMeta: {
-    flex: 1,
-  },
-  reviewRowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: IOSColors.label,
-  },
-  reviewRowSubtitle: {
-    fontSize: 12,
-    color: IOSColors.secondaryLabel,
-    marginTop: 2,
   },
 });

@@ -465,33 +465,6 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             </View>
           </View>
 
-          {/* Dedicated Review Details Row */}
-          {reviewItems.length > 0 && (
-            <Pressable
-              onPress={() => {
-                soundService.triggerLightTap();
-                setShowReviewModal(true);
-              }}
-              style={({ pressed }) => [
-                styles.reviewRowCard,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <View style={styles.reviewRowLeft}>
-                <View style={styles.reviewIconCircle}>
-                  <Ionicons name="clipboard-outline" size={20} color={IOSColors.systemOrange} />
-                </View>
-                <View style={styles.reviewRowMeta}>
-                  <Text style={styles.reviewRowTitle}>Recuento Blitz</Text>
-                  <Text style={styles.reviewRowSubtitle}>
-                    Toca para revisar las {reviewItems.length} banderas respondidas
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={IOSColors.tertiaryLabel} />
-            </Pressable>
-          )}
-
           <View style={styles.actions}>
             <AppleButton
               title={`Jugar Otra Vez (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
@@ -1026,47 +999,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
-  },
-  reviewRowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    width: '100%',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 149, 0, 0.25)',
-    ...IOSColors.cardShadow,
-  },
-  reviewRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  reviewIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255, 149, 0, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  reviewRowMeta: {
-    flex: 1,
-  },
-  reviewRowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: IOSColors.label,
-  },
-  reviewRowSubtitle: {
-    fontSize: 12,
-    color: IOSColors.secondaryLabel,
-    marginTop: 2,
   },
   exitLinkBtn: {
     paddingVertical: 10,
