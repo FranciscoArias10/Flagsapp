@@ -107,6 +107,18 @@ interface CapitalQuestion {
   correctCapital: string;
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Memory of asked countries in Capitals to prevent repetitions across rounds
+const askedCapitalsHistory: Map<string, Set<string>> = new Map();
+
 export const CapitalsGameScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
@@ -115,6 +127,7 @@ export const CapitalsGameScreen: React.FC = () => {
   const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<CapitalDifficulty>('easy');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | 'all'>(10);
   const continentFilters = ['Todos', 'América', 'Europa', 'Asia', 'África', 'Oceanía'];
 
   const [questions, setQuestions] = useState<CapitalQuestion[]>([]);
@@ -142,7 +155,7 @@ export const CapitalsGameScreen: React.FC = () => {
   }, []);
 
   const generateCapitalQuestions = (
-    count = 10,
+    count: number | 'all' = selectedQuestionCount,
     continent = selectedContinent,
     difficulty = selectedDifficulty
   ): CapitalQuestion[] => {
@@ -157,15 +170,36 @@ export const CapitalsGameScreen: React.FC = () => {
       if (filtered.length >= 4) {
         pool = filtered;
       } else {
-        // Fallback: if continent + diff has too few countries, take all countries of that difficulty
         const allWithDiff = COUNTRIES.filter((c) => c.difficulty === targetDiff);
         pool = allWithDiff.length >= 4 ? allWithDiff : pool;
       }
     }
 
-    const countToPick = Math.min(count, pool.length);
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, countToPick);
+    const poolKey = `${continent}_${difficulty}`;
+    if (!askedCapitalsHistory.has(poolKey)) {
+      askedCapitalsHistory.set(poolKey, new Set<string>());
+    }
+    const askedSet = askedCapitalsHistory.get(poolKey)!;
+
+    const targetCount = count === 'all' ? pool.length : Math.min(count, pool.length);
+
+    // Filter unseen countries to ensure zero duplicates across rounds
+    const unseen = pool.filter((c) => !askedSet.has(c.code));
+    let selected: Country[] = [];
+
+    if (unseen.length >= targetCount) {
+      selected = shuffleArray(unseen).slice(0, targetCount);
+    } else {
+      selected = [...shuffleArray(unseen)];
+      const needed = targetCount - selected.length;
+      askedSet.clear();
+      const remainingPool = pool.filter((c) => !selected.some((s) => s.code === c.code));
+      const extra = shuffleArray(remainingPool).slice(0, needed);
+      selected.push(...extra);
+    }
+
+    // Save into history
+    selected.forEach((c) => askedSet.add(c.code));
 
     return selected.map((country) => {
       const sameContinentCapitals = pool
@@ -176,11 +210,8 @@ export const CapitalsGameScreen: React.FC = () => {
         .map((c) => c.capital);
       const distractorPool = sameContinentCapitals.length >= 3 ? sameContinentCapitals : fallbackCapitals;
 
-      const otherCapitals = distractorPool
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 3);
-
-      const options = [country.capital, ...otherCapitals].sort(() => 0.5 - Math.random());
+      const otherCapitals = shuffleArray(distractorPool).slice(0, 3);
+      const options = shuffleArray([country.capital, ...otherCapitals]);
 
       return {
         country,
@@ -192,7 +223,8 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const startNewRound = (
     continent = selectedContinent,
-    difficulty = selectedDifficulty
+    difficulty = selectedDifficulty,
+    count = selectedQuestionCount
   ) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
@@ -200,7 +232,7 @@ export const CapitalsGameScreen: React.FC = () => {
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    const qs = generateCapitalQuestions(10, continent, difficulty);
+    const qs = generateCapitalQuestions(count, continent, difficulty);
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -218,7 +250,7 @@ export const CapitalsGameScreen: React.FC = () => {
   const handleStartWithDifficulty = (diffKey: CapitalDifficulty) => {
     soundService.triggerMediumTap();
     setSelectedDifficulty(diffKey);
-    startNewRound(selectedContinent, diffKey);
+    startNewRound(selectedContinent, diffKey, selectedQuestionCount);
     setScreenMode('playing');
   };
 
@@ -226,7 +258,7 @@ export const CapitalsGameScreen: React.FC = () => {
     if (cont === selectedContinent) return;
     soundService.triggerSelection();
     setSelectedContinent(cont);
-    startNewRound(cont, selectedDifficulty);
+    startNewRound(cont, selectedDifficulty, selectedQuestionCount);
   };
 
   const animateCard = () => {
@@ -378,8 +410,41 @@ export const CapitalsGameScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.diffSubtitle}>
-            Selecciona un nivel de dificultad para poner a prueba tu conocimiento geográfico en rondas de 10 preguntas:
+            Selecciona un nivel de dificultad para poner a prueba tu conocimiento geográfico:
           </Text>
+
+          {/* Question Count Selection Strip */}
+          <View style={styles.capitalsCountBox}>
+            <View style={styles.capitalsCountHeader}>
+              <Text style={styles.capitalsCountTitle}>PREGUNTAS POR PARTIDA</Text>
+              <Text style={styles.capitalsCountSub}>
+                {selectedQuestionCount === 'all' ? 'Todo el Catálogo' : `${selectedQuestionCount} Preguntas`}
+              </Text>
+            </View>
+            <View style={styles.capitalsCountChips}>
+              {([10, 20, 50, 'all'] as const).map((cnt) => {
+                const isSel = selectedQuestionCount === cnt;
+                const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                return (
+                  <Pressable
+                    key={String(cnt)}
+                    onPress={() => {
+                      soundService.triggerSelection();
+                      setSelectedQuestionCount(cnt);
+                    }}
+                    style={[
+                      styles.capitalsCountChip,
+                      isSel && styles.capitalsCountChipActive,
+                    ]}
+                  >
+                    <Text style={[styles.capitalsCountChipText, isSel && styles.capitalsCountChipTextActive]}>
+                      {lbl}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
           {/* Cards for each difficulty */}
           {(Object.keys(CAPITALS_DIFFICULTIES) as CapitalDifficulty[]).map((key) => {
@@ -531,10 +596,40 @@ export const CapitalsGameScreen: React.FC = () => {
           <View style={styles.summaryActions}>
             <AppleButton
               title={selectedContinent === 'Todos' ? `Jugar de Nuevo (${currentDiffConfig.title.split(' ')[1] || 'Ronda'})` : `Jugar de Nuevo (${selectedContinent})`}
-              onPress={() => startNewRound(selectedContinent, selectedDifficulty)}
+              onPress={() => startNewRound(selectedContinent, selectedDifficulty, selectedQuestionCount)}
               variant="gradient"
-              style={{ width: '100%', marginBottom: 10 }}
+              style={{ width: '100%', marginBottom: 8 }}
             />
+
+            {/* Quick Question Count Switcher on Game Over */}
+            <View style={styles.summaryCountRow}>
+              <Text style={styles.summaryCountLabel}>Preguntas para la próxima ronda:</Text>
+              <View style={styles.summaryCountChips}>
+                {([10, 20, 50, 'all'] as const).map((cnt) => {
+                  const isSel = selectedQuestionCount === cnt;
+                  const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                  return (
+                    <Pressable
+                      key={String(cnt)}
+                      onPress={() => {
+                        soundService.triggerSelection();
+                        setSelectedQuestionCount(cnt);
+                        startNewRound(selectedContinent, selectedDifficulty, cnt);
+                      }}
+                      style={[
+                        styles.summaryCountChip,
+                        isSel && styles.summaryCountChipActive,
+                      ]}
+                    >
+                      <Text style={[styles.summaryCountChipText, isSel && styles.summaryCountChipTextActive]}>
+                        {lbl}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             <AppleButton
               title="Cambiar Dificultad"
               onPress={() => {
@@ -1345,5 +1440,95 @@ const styles = StyleSheet.create({
   summaryActions: {
     width: '100%',
     marginTop: 6,
+  },
+  capitalsCountBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    ...IOSColors.cardShadow,
+  },
+  capitalsCountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  capitalsCountTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: IOSColors.secondaryLabel,
+    letterSpacing: 0.8,
+  },
+  capitalsCountSub: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.systemPurple,
+  },
+  capitalsCountChips: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  capitalsCountChip: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  capitalsCountChipActive: {
+    backgroundColor: IOSColors.systemPurple,
+    borderColor: IOSColors.systemPurple,
+  },
+  capitalsCountChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  capitalsCountChipTextActive: {
+    color: '#FFFFFF',
+  },
+  summaryCountRow: {
+    width: '100%',
+    marginVertical: 10,
+    alignItems: 'center',
+  },
+  summaryCountLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.secondaryLabel,
+    marginBottom: 8,
+  },
+  summaryCountChips: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  summaryCountChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  summaryCountChipActive: {
+    backgroundColor: IOSColors.systemPurple,
+    borderColor: IOSColors.systemPurple,
+  },
+  summaryCountChipText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  summaryCountChipTextActive: {
+    color: '#FFFFFF',
   },
 });
