@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizResult, AnswerReviewItem } from '../types';
 import { COUNTRIES } from '../data/countries';
+import { COUNTRY_CITIES } from '../data/countryCities';
 import { calculateStars, calculateXpEarned } from '../utils/quizGenerator';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
@@ -255,16 +256,25 @@ export const CapitalsGameScreen: React.FC = () => {
     selected.forEach((c) => askedSet.add(c.code));
 
     return selected.map((country) => {
-      const sameContinentCapitals = pool
-        .filter((c) => c.capital !== country.capital)
-        .map((c) => c.capital);
-      const fallbackCapitals = COUNTRIES
-        .filter((c) => c.capital !== country.capital)
-        .map((c) => c.capital);
-      const distractorPool = sameContinentCapitals.length >= 3 ? sameContinentCapitals : fallbackCapitals;
+      // 1. Same-country real cities (e.g. Guayaquil, Machala, Cuenca for Ecuador)
+      const sameCountryCities = (COUNTRY_CITIES[country.code] || [])
+        .filter((cityName) => cityName.toLowerCase().trim() !== country.capital.toLowerCase().trim());
 
-      const otherCapitals = shuffleArray(distractorPool).slice(0, 3);
-      const options = shuffleArray([country.capital, ...otherCapitals]);
+      let distractors: string[] = [];
+      if (sameCountryCities.length >= 3) {
+        distractors = shuffleArray(sameCountryCities).slice(0, 3);
+      } else {
+        // Fallback for microstates or if fewer than 3 cities are available
+        const fallbackCities = [...sameCountryCities];
+        const sameContinentCapitals = pool
+          .filter((c) => c.capital !== country.capital && !fallbackCities.includes(c.capital))
+          .map((c) => c.capital);
+        const extraNeeded = 3 - fallbackCities.length;
+        const extraCapitals = shuffleArray(sameContinentCapitals).slice(0, extraNeeded);
+        distractors = [...fallbackCities, ...extraCapitals];
+      }
+
+      const options = shuffleArray([country.capital, ...distractors]);
 
       return {
         country,
@@ -529,7 +539,7 @@ export const CapitalsGameScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.diffSubtitle}>
-            Selecciona un nivel de dificultad para poner a prueba tu conocimiento geográfico:
+            Selecciona una dificultad. Las opciones serán ciudades del mismo país, ¡demuestra que conoces la verdadera capital!
           </Text>
 
           {/* Cards for each difficulty */}

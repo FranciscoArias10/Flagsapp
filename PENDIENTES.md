@@ -70,3 +70,7 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
   - Verificación de campo no vacío con alertas nativas y estados de error visuales.
 - [x] **Identidad Visual y Logotipo Oficial**
   - Globo terráqueo 3D con cintas de banderas integrado en `icon.png`, `splash.png`, favicon y headers.
+- [x] **Distractores de Ciudades del Mismo País en Modo Capitales**:
+  - En lugar de mostrar capitales de otros países, las 4 opciones de cada pregunta son ciudades reales del mismo país (ej. para Ecuador: Guayaquil, Cuenca, Machala vs Quito).
+  - Diccionario completo de ciudades destacadas para los 126 países en `countryCities.ts` con fallback inteligente.
+
