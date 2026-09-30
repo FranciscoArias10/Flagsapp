@@ -32,6 +32,7 @@ export const PlayScreen: React.FC = () => {
 
   const [activeQuizContinent, setActiveQuizContinent] = useState<Continent | 'Mundo' | null>(null);
   const [showBlitzModal, setShowBlitzModal] = useState(false);
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | 'all'>(10);
 
   const handleStartQuiz = (continent: Continent | 'Mundo') => {
     soundService.triggerLightTap();
@@ -129,6 +130,37 @@ export const PlayScreen: React.FC = () => {
           </LinearGradient>
         </Pressable>
 
+        {/* Question Count Selection Strip */}
+        <View style={styles.countSelectorHeader}>
+          <Text style={styles.sectionTitle}>PREGUNTAS POR RONDA</Text>
+          <Text style={styles.countSelectedSub}>
+            {selectedQuestionCount === 'all' ? 'Todo el Catálogo' : `${selectedQuestionCount} Preguntas`}
+          </Text>
+        </View>
+        <View style={styles.countSelectorRow}>
+          {([10, 20, 50, 'all'] as const).map((cnt) => {
+            const isSelected = selectedQuestionCount === cnt;
+            const label = cnt === 'all' ? 'Todas' : `${cnt}`;
+            return (
+              <Pressable
+                key={String(cnt)}
+                onPress={() => {
+                  soundService.triggerSelection();
+                  setSelectedQuestionCount(cnt);
+                }}
+                style={[
+                  styles.countChip,
+                  isSelected && styles.countChipActive,
+                ]}
+              >
+                <Text style={[styles.countChipText, isSelected && styles.countChipTextActive]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {/* Global Explorer Mode Card */}
         <Text style={styles.sectionTitle}>MODO GLOBAL</Text>
         <Pressable
@@ -151,7 +183,9 @@ export const PlayScreen: React.FC = () => {
               </View>
             </View>
             <View style={styles.globalFooter}>
-              <Text style={styles.globalQuestionCount}>10 Preguntas Variadas</Text>
+              <Text style={styles.globalQuestionCount}>
+                {selectedQuestionCount === 'all' ? '126 Preguntas (Catálogo Completo)' : `${selectedQuestionCount} Preguntas Variadas`}
+              </Text>
               <Ionicons name="play-circle" size={32} color="#FFFFFF" />
             </View>
           </LinearGradient>
@@ -208,6 +242,7 @@ export const PlayScreen: React.FC = () => {
         {activeQuizContinent && (
           <QuizGameScreen
             continent={activeQuizContinent}
+            initialQuestionCount={selectedQuestionCount}
             onClose={() => setActiveQuizContinent(null)}
           />
         )}
@@ -469,5 +504,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginRight: 2,
+  },
+  countSelectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 22,
+    marginBottom: 8,
+  },
+  countSelectedSub: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.systemBlue,
+  },
+  countSelectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  countChip: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    ...IOSColors.cardShadow,
+  },
+  countChipActive: {
+    backgroundColor: IOSColors.systemBlue,
+    borderColor: IOSColors.systemBlue,
+  },
+  countChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  countChipTextActive: {
+    color: '#FFFFFF',
   },
 });

@@ -25,17 +25,20 @@ import { useGame } from '../context/GameContext';
 
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
+  initialQuestionCount?: number | 'all';
   onClose: () => void;
 }
 
 export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   continent = 'Mundo',
+  initialQuestionCount = 10,
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordQuizResult } = useGame();
 
+  const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
@@ -72,14 +75,15 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     startNewGame();
   }, [continent]);
 
-  const startNewGame = () => {
+  const startNewGame = (countParam = questionCount) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    const generated = generateQuizQuestions(10, continent, 'flag_to_name');
+    const targetCount = countParam === 'all' ? 999 : countParam;
+    const generated = generateQuizQuestions(targetCount, continent, 'flag_to_name');
     setQuestions(generated);
     setCurrentIndex(0);
     setSelectedOptionIndex(null);
@@ -334,11 +338,41 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           {/* Action Buttons */}
           <View style={styles.summaryActions}>
             <AppleButton
-              title="Jugar Otra Vez"
-              onPress={startNewGame}
+              title={`Jugar Otra Vez (${questionCount === 'all' ? 'Todas' : `${questionCount} Qs`})`}
+              onPress={() => startNewGame()}
               variant="gradient"
               style={styles.actionBtn}
             />
+
+            {/* Quick Question Count Switcher on Game Over */}
+            <View style={styles.summaryCountRow}>
+              <Text style={styles.summaryCountLabel}>Preguntas para la próxima ronda:</Text>
+              <View style={styles.summaryCountChips}>
+                {([10, 20, 50, 'all'] as const).map((cnt) => {
+                  const isSel = questionCount === cnt;
+                  const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                  return (
+                    <Pressable
+                      key={String(cnt)}
+                      onPress={() => {
+                        soundService.triggerSelection();
+                        setQuestionCount(cnt);
+                        startNewGame(cnt);
+                      }}
+                      style={[
+                        styles.summaryCountChip,
+                        isSel && styles.summaryCountChipActive,
+                      ]}
+                    >
+                      <Text style={[styles.summaryCountChipText, isSel && styles.summaryCountChipTextActive]}>
+                        {lbl}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             <AppleButton
               title="Menú Principal"
               onPress={onClose}
@@ -849,5 +883,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  summaryCountRow: {
+    width: '100%',
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  summaryCountLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: IOSColors.secondaryLabel,
+    marginBottom: 8,
+  },
+  summaryCountChips: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  summaryCountChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  summaryCountChipActive: {
+    backgroundColor: IOSColors.systemBlue,
+    borderColor: IOSColors.systemBlue,
+  },
+  summaryCountChipText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IOSColors.label,
+  },
+  summaryCountChipTextActive: {
+    color: '#FFFFFF',
   },
 });
