@@ -145,6 +145,10 @@ export const CapitalsGameScreen: React.FC = () => {
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  const QUESTION_TIME_LIMIT = 15;
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
+  const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownAnim = useRef(new Animated.Value(0)).current;
@@ -154,8 +158,38 @@ export const CapitalsGameScreen: React.FC = () => {
   useEffect(() => {
     return () => {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
     };
   }, []);
+
+  // Per-question countdown timer effect
+  useEffect(() => {
+    if (questions.length === 0 || showSummary || isAnswered || screenMode !== 'playing') {
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      return;
+    }
+
+    setTimeLeft(QUESTION_TIME_LIMIT);
+    if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+
+    questionTimerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+          handleTimeout();
+          return 0;
+        }
+        if (prev <= 4) {
+          soundService.triggerLightTap();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+    };
+  }, [currentIndex, questions.length, showSummary, isAnswered, screenMode]);
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
@@ -228,8 +262,13 @@ export const CapitalsGameScreen: React.FC = () => {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
+    setTimeLeft(QUESTION_TIME_LIMIT);
     const qs = generateCapitalQuestions(count, difficulty);
     setQuestions(qs);
     setCurrentIndex(0);
@@ -272,8 +311,56 @@ export const CapitalsGameScreen: React.FC = () => {
     ]).start();
   };
 
+  const handleTimeout = () => {
+    if (isAnswered) return;
+    setIsAnswered(true);
+    setSelectedCapital(null);
+
+    const currentQ = questions[currentIndex];
+    if (!currentQ) return;
+
+    setReviewItems((prev) => [
+      ...prev,
+      {
+        id: `${currentQ.country.code}-${currentIndex}`,
+        flagEmoji: currentQ.country.flagEmoji,
+        countryName: currentQ.country.name,
+        countryCode: currentQ.country.code,
+        userAnswer: 'Tiempo agotado ⏱️',
+        correctAnswer: currentQ.correctCapital,
+        isCorrect: false,
+        fact: currentQ.country.fact,
+      },
+    ]);
+
+    recordAnswer(false);
+    soundService.triggerError();
+    triggerShake();
+    setStreak(0);
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+
+    countdownAnim.setValue(0);
+    Animated.timing(countdownAnim, {
+      toValue: 1,
+      duration: 1800,
+      useNativeDriver: false,
+    }).start();
+
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = setTimeout(() => {
+      handleNext();
+    }, 1800);
+  };
+
   const handleSelectCapital = (cap: string) => {
     if (isAnswered) return;
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
 
     setSelectedCapital(cap);
     setIsAnswered(true);
@@ -335,8 +422,13 @@ export const CapitalsGameScreen: React.FC = () => {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
+    setTimeLeft(QUESTION_TIME_LIMIT);
 
     soundService.triggerLightTap();
 
@@ -367,13 +459,28 @@ export const CapitalsGameScreen: React.FC = () => {
       stars,
     };
 
-    recordQuizResult(result, undefined, 'capitals');
+    recordQuizResult(result, selectedDifficulty, 'capitals');
     setShowSummary(true);
 
     if (stars >= 2) {
       setShowConfetti(true);
       soundService.triggerCelebration();
     }
+  };
+
+  const renderStars = (stars: number = 0) => {
+    return (
+      <View style={styles.starsRowCompact}>
+        {[1, 2, 3].map((s) => (
+          <Ionicons
+            key={s}
+            name="star"
+            size={13}
+            color={stars >= s ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.25)'}
+          />
+        ))}
+      </View>
+    );
   };
 
   // 1. DIFFICULTY SELECTION SCREEN
@@ -444,6 +551,7 @@ export const CapitalsGameScreen: React.FC = () => {
             const diff = CAPITALS_DIFFICULTIES[key];
             const isFeatured = key === 'medium';
             const isHard = key === 'hard';
+            const prog = stats.capitalsProgress?.[diff.key] || { correct: 0, total: 0, stars: 0, bestScore: 0 };
 
             return (
               <Pressable
@@ -468,10 +576,18 @@ export const CapitalsGameScreen: React.FC = () => {
                   </LinearGradient>
 
                   <View style={styles.diffCardHeadText}>
-                    <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
-                      <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
-                        {diff.tag}
-                      </Text>
+                    <View style={styles.diffTagAndStarsRow}>
+                      <View style={[styles.diffTagBadge, { backgroundColor: diff.tagBg }]}>
+                        <Text style={[styles.diffTagBadgeText, { color: diff.tagColor }]}>
+                          {diff.tag}
+                        </Text>
+                      </View>
+                      <View style={styles.diffStarsRow}>
+                        {renderStars(prog.stars)}
+                        {Boolean(prog.bestScore && prog.bestScore > 0) && (
+                          <Text style={styles.diffBestScoreText}>Mejor: {prog.bestScore} pts</Text>
+                        )}
+                      </View>
                     </View>
                     <Text style={styles.diffCardTitle} numberOfLines={1} adjustsFontSizeToFit>
                       {diff.title}
@@ -652,30 +768,47 @@ export const CapitalsGameScreen: React.FC = () => {
     <View style={[styles.container, { paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
-        <Pressable
-          onPress={() => {
-            soundService.triggerLightTap();
-            setScreenMode('difficulty_select');
-          }}
-          style={styles.backBtn}
-          hitSlop={12}
-        >
-          <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
-        </Pressable>
+        <View style={styles.headerControlRow}>
+          <Pressable
+            onPress={() => {
+              soundService.triggerLightTap();
+              setScreenMode('difficulty_select');
+            }}
+            style={styles.backBtn}
+            hitSlop={12}
+          >
+            <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
+          </Pressable>
+
+          <View style={[styles.timerPill, timeLeft <= 4 && styles.timerPillUrgent]}>
+            <Ionicons
+              name="timer"
+              size={15}
+              color={timeLeft <= 4 ? '#FF3B30' : currentDiffConfig.color}
+            />
+            <Text style={[styles.timerText, timeLeft <= 4 && styles.timerTextUrgent]}>
+              {timeLeft}s
+            </Text>
+          </View>
+
+          <View style={styles.headerRight}>
+            <View style={styles.scorePill}>
+              <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
+              <Text style={styles.scorePillText}>{score} pts</Text>
+            </View>
+            <StreakBadge streak={streak} size="small" />
+          </View>
+        </View>
 
         <View style={styles.progressContainer}>
           <ProgressBar
             progress={progress}
-            height={8}
+            height={6}
             gradientColors={currentDiffConfig.gradient}
           />
           <Text style={styles.questionCounter}>
             {currentIndex + 1} de {questions.length}
           </Text>
-        </View>
-
-        <View style={styles.streakWrap}>
-          <StreakBadge streak={streak} size="small" />
         </View>
       </View>
 
@@ -864,31 +997,75 @@ const styles = StyleSheet.create({
     backgroundColor: IOSColors.systemBackground,
   },
   topHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  headerControlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    marginBottom: 8,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     ...IOSColors.cardShadow,
   },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  timerPillUrgent: {
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.4)',
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: IOSColors.systemBlue,
+  },
+  timerTextUrgent: {
+    color: '#FF3B30',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scorePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(175, 82, 222, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scorePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IOSColors.systemPurple,
+  },
   progressContainer: {
-    flex: 1,
-    marginHorizontal: 16,
+    width: '100%',
     alignItems: 'center',
   },
   questionCounter: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: IOSColors.tertiaryLabel,
-    marginTop: 6,
+    marginTop: 4,
   },
   streakWrap: {
     minWidth: 40,
@@ -1186,11 +1363,7 @@ const styles = StyleSheet.create({
     color: IOSColors.label,
     letterSpacing: -0.4,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+
   xpPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1250,12 +1423,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  diffTagAndStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  diffStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  diffBestScoreText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: IOSColors.systemGreen,
+  },
+  starsRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   diffTagBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    marginBottom: 4,
   },
   diffTagBadgeText: {
     fontSize: 10,

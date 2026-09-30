@@ -68,6 +68,7 @@ export interface UserStats {
   correctAnswers: number;
   totalAnswers: number;
   continentProgress: Record<string, { correct: number; total: number; stars: number }>;
+  capitalsProgress?: Record<string, { correct: number; total: number; stars: number; bestScore?: number }>;
   unlockedAchievements: string[];
   soundEnabled: boolean;
   hapticsEnabled: boolean;

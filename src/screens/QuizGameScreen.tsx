@@ -51,6 +51,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  const QUESTION_TIME_LIMIT = 15;
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
+  const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownAnim = useRef(new Animated.Value(0)).current;
@@ -68,6 +72,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   useEffect(() => {
     return () => {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
     };
   }, []);
 
@@ -75,13 +80,47 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     startNewGame();
   }, [continent]);
 
+  // Question countdown timer effect
+  useEffect(() => {
+    if (questions.length === 0 || showSummary || isAnswered) {
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      return;
+    }
+
+    setTimeLeft(QUESTION_TIME_LIMIT);
+    if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+
+    questionTimerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+          handleTimeout();
+          return 0;
+        }
+        if (prev <= 4) {
+          soundService.triggerLightTap();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+    };
+  }, [currentIndex, questions.length, showSummary, isAnswered]);
+
   const startNewGame = (countParam = questionCount) => {
     if (autoAdvanceTimer.current) {
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
+    setTimeLeft(QUESTION_TIME_LIMIT);
     const targetCount = countParam === 'all' ? 999 : countParam;
     const generated = generateQuizQuestions(targetCount, continent, 'flag_to_name');
     setQuestions(generated);
@@ -127,8 +166,57 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     ]).start();
   };
 
+  const handleTimeout = () => {
+    if (isAnswered) return;
+    setIsAnswered(true);
+    setSelectedOptionIndex(null);
+
+    const currentQ = questions[currentIndex];
+    if (!currentQ) return;
+    const correctAnswer = currentQ.options[currentQ.correctOptionIndex]?.name || '';
+
+    setReviewItems((prev) => [
+      ...prev,
+      {
+        id: currentQ.id || `${currentQ.targetCountry.code}-${currentIndex}`,
+        flagEmoji: currentQ.targetCountry.flagEmoji,
+        countryName: currentQ.targetCountry.name,
+        countryCode: currentQ.targetCountry.code,
+        userAnswer: 'Tiempo agotado ⏱️',
+        correctAnswer,
+        isCorrect: false,
+        fact: currentQ.targetCountry.fact,
+      },
+    ]);
+
+    recordAnswer(false);
+    soundService.triggerError();
+    triggerShake();
+    setCurrentStreak(0);
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+
+    countdownAnim.setValue(0);
+    Animated.timing(countdownAnim, {
+      toValue: 1,
+      duration: 1800,
+      useNativeDriver: false,
+    }).start();
+
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = setTimeout(() => {
+      handleNext();
+    }, 1800);
+  };
+
   const handleSelectOption = (index: number) => {
     if (isAnswered) return;
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
 
     setSelectedOptionIndex(index);
     setIsAnswered(true);
@@ -192,8 +280,13 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
+    setTimeLeft(QUESTION_TIME_LIMIT);
 
     soundService.triggerLightTap();
 
@@ -396,19 +489,36 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     <View style={[styles.container, { paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
-        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
-          <Ionicons name="close-circle" size={30} color={IOSColors.tertiaryLabel} />
-        </Pressable>
+        <View style={styles.headerControlRow}>
+          <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+            <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
+          </Pressable>
+
+          <View style={[styles.timerPill, timeLeft <= 4 && styles.timerPillUrgent]}>
+            <Ionicons
+              name="timer"
+              size={15}
+              color={timeLeft <= 4 ? '#FF3B30' : IOSColors.systemBlue}
+            />
+            <Text style={[styles.timerText, timeLeft <= 4 && styles.timerTextUrgent]}>
+              {timeLeft}s
+            </Text>
+          </View>
+
+          <View style={styles.headerRight}>
+            <View style={styles.scorePill}>
+              <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
+              <Text style={styles.scorePillText}>{score} pts</Text>
+            </View>
+            <StreakBadge streak={currentStreak} size="small" />
+          </View>
+        </View>
 
         <View style={styles.progressContainer}>
-          <ProgressBar progress={progress} height={8} />
+          <ProgressBar progress={progress} height={6} />
           <Text style={styles.questionCounter}>
             {currentIndex + 1} de {questions.length}
           </Text>
-        </View>
-
-        <View style={styles.streakWrap}>
-          <StreakBadge streak={currentStreak} size="small" />
         </View>
       </View>
 
@@ -588,29 +698,75 @@ const styles = StyleSheet.create({
     backgroundColor: IOSColors.systemBackground,
   },
   topHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  headerControlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    marginBottom: 8,
   },
   closeBtn: {
-    padding: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...IOSColors.cardShadow,
+  },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  timerPillUrgent: {
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.4)',
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: IOSColors.systemBlue,
+  },
+  timerTextUrgent: {
+    color: '#FF3B30',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scorePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(175, 82, 222, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scorePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IOSColors.systemPurple,
   },
   progressContainer: {
-    flex: 1,
-    marginHorizontal: 16,
+    width: '100%',
     alignItems: 'center',
   },
   questionCounter: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: IOSColors.tertiaryLabel,
-    marginTop: 6,
-  },
-  streakWrap: {
-    minWidth: 40,
-    alignItems: 'flex-end',
+    marginTop: 4,
   },
   scrollContent: {
     paddingHorizontal: 20,

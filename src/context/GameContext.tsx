@@ -57,6 +57,7 @@ const INITIAL_STATS: UserStats = {
   correctAnswers: 0,
   totalAnswers: 0,
   continentProgress: {},
+  capitalsProgress: {},
   unlockedAchievements: [],
   soundEnabled: true,
   hapticsEnabled: true,
@@ -184,12 +185,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newBestStreak = Math.max(prev.bestStreak, result.highestStreak);
 
       const continentProgress = { ...prev.continentProgress };
-      if (continent) {
+      if (continent && mode !== 'capitals') {
         const existing = continentProgress[continent] || { correct: 0, total: 0, stars: 0 };
         continentProgress[continent] = {
           correct: existing.correct + result.score,
           total: existing.total + result.totalQuestions,
           stars: Math.max(existing.stars, result.stars),
+        };
+      }
+
+      const capitalsProgress = { ...(prev.capitalsProgress || {}) };
+      if (mode === 'capitals' && continent) {
+        const existing = capitalsProgress[continent] || { correct: 0, total: 0, stars: 0, bestScore: 0 };
+        capitalsProgress[continent] = {
+          correct: existing.correct + result.score,
+          total: existing.total + result.totalQuestions,
+          stars: Math.max(existing.stars, result.stars),
+          bestScore: Math.max(existing.bestScore || 0, result.score),
         };
       }
 
@@ -201,6 +213,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bestStreak: newBestStreak,
         gamesPlayed: newGames,
         continentProgress,
+        capitalsProgress,
       };
 
       let currentAch = achievements;
