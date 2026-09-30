@@ -16,12 +16,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
 
 ### 🎮 Experiencia de Juego (Gameplay)
-- [ ] **Selector de Cantidad de Preguntas (Maratón / Partida Rápida)**:
-  - Permitir al jugador elegir el número de preguntas antes de empezar en todos los modos (ej. 10, 20, 50, 100 o *"Todos"*).
-  - Adaptar la barra de progreso, cálculo de estrellas y bonificación proporcional de XP según la duración elegida.
-- [ ] **Sistema de Baraja Inteligente sin Repeticiones (Zero Duplicates Engine)**:
-  - Garantizar que ni en Banderas ni en Capitales se repita ninguna pregunta o país dentro de la misma ronda.
-  - Memoria de preguntas recientes para que en partidas consecutivas se prioricen países que el jugador aún no ha visto hasta agotar el grupo/continente seleccionado.
 - [ ] **Logros Adicionales (Achievements)**:
   - Nuevas medallas desbloqueables (ej. *"Conquistador de África"*, *"Experto en Oceanía"*, *"Maestro del Blitz 5s"*, *"Racha de 25"*, *"Maratón de 100"*).
 - [ ] **Filtro por Dificultad en el Atlas**:
@@ -44,6 +38,13 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Selector de Cantidad de Preguntas (10, 20, 50 o Todo el Catálogo)**:
+  - Selector disponible en la pantalla principal para el Quiz de Banderas y en la pantalla de dificultad de Capitales.
+  - Adaptación automática del total de preguntas, progreso dinámico, cálculo de estrellas y bonificaciones de XP por maratón.
+  - Selector rápido en la pantalla de fin de partida para iniciar la siguiente ronda con la cantidad deseada.
+- [x] **Sistema de Baraja Inteligente sin Repeticiones (Zero Duplicates Engine)**:
+  - Garantía de 0 preguntas repetidas dentro de una misma ronda en Banderas y Capitales.
+  - Memoria entre rondas consecutivas para priorizar países aún no preguntados hasta completar el ciclo del continente o dificultad.
 - [x] **Selector y Niveles de Dificultad en Modo Capitales**:
   - Pantalla inicial con 4 niveles de dificultad: *Fácil (Nivel 1 • 33 países)*, *Intermedio (Nivel 2 • 75 países)*, *Experto (Nivel 3 • 18 países)* y *Todas las Capitales (Modo Global • 126 países)*.
   - Filtrado dinámico de preguntas y distractores según la dificultad y el continente seleccionado.
