@@ -131,9 +131,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<CapitalDifficulty>('easy');
-  const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | 'all'>(10);
-  const continentFilters = ['Todos', 'América', 'Europa', 'Asia', 'África', 'Oceanía'];
 
   const [questions, setQuestions] = useState<CapitalQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -161,13 +159,9 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
-    continent = selectedContinent,
     difficulty = selectedDifficulty
   ): CapitalQuestion[] => {
     let pool = COUNTRIES;
-    if (continent !== 'Todos') {
-      pool = pool.filter((c) => c.continent === continent);
-    }
 
     if (difficulty !== 'all') {
       const targetDiff = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
@@ -180,7 +174,7 @@ export const CapitalsGameScreen: React.FC = () => {
       }
     }
 
-    const poolKey = `${continent}_${difficulty}`;
+    const poolKey = `capitals_${difficulty}`;
     if (!askedCapitalsHistory.has(poolKey)) {
       askedCapitalsHistory.set(poolKey, new Set<string>());
     }
@@ -227,7 +221,6 @@ export const CapitalsGameScreen: React.FC = () => {
   };
 
   const startNewRound = (
-    continent = selectedContinent,
     difficulty = selectedDifficulty,
     count = selectedQuestionCount
   ) => {
@@ -237,7 +230,7 @@ export const CapitalsGameScreen: React.FC = () => {
     }
     countdownAnim.stopAnimation();
     countdownAnim.setValue(0);
-    const qs = generateCapitalQuestions(count, continent, difficulty);
+    const qs = generateCapitalQuestions(count, difficulty);
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -255,15 +248,8 @@ export const CapitalsGameScreen: React.FC = () => {
   const handleStartWithDifficulty = (diffKey: CapitalDifficulty) => {
     soundService.triggerMediumTap();
     setSelectedDifficulty(diffKey);
-    startNewRound(selectedContinent, diffKey, selectedQuestionCount);
+    startNewRound(diffKey, selectedQuestionCount);
     setScreenMode('playing');
-  };
-
-  const handleSelectContinent = (cont: string) => {
-    if (cont === selectedContinent) return;
-    soundService.triggerSelection();
-    setSelectedContinent(cont);
-    startNewRound(cont, selectedDifficulty, selectedQuestionCount);
   };
 
   const animateCard = () => {
@@ -381,7 +367,7 @@ export const CapitalsGameScreen: React.FC = () => {
       stars,
     };
 
-    recordQuizResult(result, selectedContinent !== 'Todos' ? selectedContinent : undefined, 'capitals');
+    recordQuizResult(result, undefined, 'capitals');
     setShowSummary(true);
 
     if (stars >= 2) {
@@ -549,7 +535,7 @@ export const CapitalsGameScreen: React.FC = () => {
             </Text>
           </View>
 
-          <Text style={styles.summaryPretitle}>MODO CAPITALES • {selectedContinent.toUpperCase()}</Text>
+          <Text style={styles.summaryPretitle}>MODO CAPITALES</Text>
           <Text style={styles.summaryTitle}>
             {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
           </Text>
@@ -604,8 +590,8 @@ export const CapitalsGameScreen: React.FC = () => {
 
           <View style={styles.summaryActions}>
             <AppleButton
-              title={selectedContinent === 'Todos' ? `Jugar de Nuevo (${currentDiffConfig.shortName})` : `Jugar de Nuevo (${selectedContinent})`}
-              onPress={() => startNewRound(selectedContinent, selectedDifficulty, selectedQuestionCount)}
+              title={`Jugar de Nuevo (${currentDiffConfig.shortName})`}
+              onPress={() => startNewRound(selectedDifficulty, selectedQuestionCount)}
               variant="gradient"
               style={{ width: '100%', marginBottom: 8 }}
             />
@@ -623,7 +609,7 @@ export const CapitalsGameScreen: React.FC = () => {
                       onPress={() => {
                         soundService.triggerSelection();
                         setSelectedQuestionCount(cnt);
-                        startNewRound(selectedContinent, selectedDifficulty, cnt);
+                        startNewRound(selectedDifficulty, cnt);
                       }}
                       style={[
                         styles.summaryCountChip,
@@ -656,7 +642,7 @@ export const CapitalsGameScreen: React.FC = () => {
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={`Recuento de Capitales (${selectedContinent})`}
+          title={`Recuento de Capitales (${currentDiffConfig.shortName})`}
         />
       </View>
     );
@@ -664,42 +650,18 @@ export const CapitalsGameScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
+      {/* Top Header */}
       <View style={styles.topHeader}>
-        <View style={styles.headerControlRow}>
-          <Pressable
-            onPress={() => {
-              soundService.triggerLightTap();
-              setScreenMode('difficulty_select');
-            }}
-            style={styles.backBtn}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={20} color={IOSColors.label} />
-            <Text style={styles.backBtnText}>Niveles</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              soundService.triggerLightTap();
-              setScreenMode('difficulty_select');
-            }}
-            style={[
-              styles.activeDiffBadge,
-              {
-                borderColor: `${currentDiffConfig.color}40`,
-                backgroundColor: `${currentDiffConfig.color}15`,
-              },
-            ]}
-          >
-            <Ionicons name={currentDiffConfig.icon} size={13} color={currentDiffConfig.color} />
-            <Text style={[styles.activeDiffText, { color: currentDiffConfig.color }]}>
-              {currentDiffConfig.shortName}
-            </Text>
-            <Ionicons name="chevron-down" size={12} color={currentDiffConfig.color} />
-          </Pressable>
-
-          <StreakBadge streak={streak} size="small" />
-        </View>
+        <Pressable
+          onPress={() => {
+            soundService.triggerLightTap();
+            setScreenMode('difficulty_select');
+          }}
+          style={styles.backBtn}
+          hitSlop={12}
+        >
+          <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
+        </Pressable>
 
         <View style={styles.progressContainer}>
           <ProgressBar
@@ -711,33 +673,10 @@ export const CapitalsGameScreen: React.FC = () => {
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
-      </View>
 
-      {/* Continent Filter Chips */}
-      <View style={styles.chipsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
-        >
-          {continentFilters.map((filter) => {
-            const isSelected = selectedContinent === filter;
-            return (
-              <Pressable
-                key={filter}
-                onPress={() => handleSelectContinent(filter)}
-                style={[
-                  styles.chip,
-                  isSelected && styles.chipActive,
-                ]}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                  {filter}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={styles.streakWrap}>
+          <StreakBadge streak={streak} size="small" />
+        </View>
       </View>
 
       <ScrollView
@@ -931,45 +870,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...IOSColors.cardShadow,
+  },
   progressContainer: {
     flex: 1,
-    marginRight: 16,
+    marginHorizontal: 16,
     alignItems: 'center',
   },
   questionCounter: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: IOSColors.tertiaryLabel,
     marginTop: 6,
   },
-  chipsContainer: {
-    paddingVertical: 6,
-    marginBottom: 6,
-  },
-  chipsScroll: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-    ...IOSColors.cardShadow,
-  },
-  chipActive: {
-    backgroundColor: IOSColors.systemPurple,
-    borderColor: IOSColors.systemPurple,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: IOSColors.secondaryLabel,
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
+  streakWrap: {
+    minWidth: 40,
+    alignItems: 'flex-end',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -1396,39 +1319,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerControlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-  },
-  backBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: IOSColors.label,
-  },
-  activeDiffBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  activeDiffText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
+
   diffBadgeGameOver: {
     flexDirection: 'row',
     alignItems: 'center',
