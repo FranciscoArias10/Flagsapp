@@ -402,7 +402,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
         <ScrollView
           style={styles.diffScroll}
-          contentContainerStyle={styles.diffScrollContent}
+          contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 40 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.diffSubtitle}>
@@ -1042,10 +1042,12 @@ const styles = StyleSheet.create({
   },
   optButton: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 18,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(0, 0, 0, 0.04)',
     ...IOSColors.cardShadow,
@@ -1062,9 +1064,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: IOSColors.label,
+    flex: 1,
+    textAlign: 'center',
   },
   optTextCorrect: {
     color: IOSColors.systemGreen,

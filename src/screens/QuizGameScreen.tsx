@@ -698,7 +698,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + insets.bottom }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Animated Question Card */}
