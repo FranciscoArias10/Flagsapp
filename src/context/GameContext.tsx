@@ -61,6 +61,7 @@ const INITIAL_STATS: UserStats = {
   unlockedAchievements: [],
   soundEnabled: true,
   hapticsEnabled: true,
+  fastAnswerOpportunityEnabled: true,
 };
 
 interface GameContextType {
@@ -72,6 +73,7 @@ interface GameContextType {
   updateProfile: (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => Promise<void>;
   toggleSound: () => void;
   toggleHaptics: () => void;
+  toggleFastAnswerOpportunity: () => void;
   resetProgress: () => Promise<void>;
   exportBackupData: () => Promise<string>;
   importBackupData: (backupJson: string) => Promise<{ success: boolean; message: string }>;
@@ -98,6 +100,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (savedStats) {
         const parsed = JSON.parse(savedStats);
+        if (parsed.fastAnswerOpportunityEnabled === undefined) {
+          parsed.fastAnswerOpportunityEnabled = true;
+        }
         setStats(parsed);
         soundService.setPreferences(parsed.soundEnabled, parsed.hapticsEnabled);
       }
@@ -254,6 +259,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const toggleFastAnswerOpportunity = () => {
+    setStats((prev) => {
+      const updated = {
+        ...prev,
+        fastAnswerOpportunityEnabled: prev.fastAnswerOpportunityEnabled === false ? true : false,
+      };
+      persistData(updated, achievements);
+      return updated;
+    });
+  };
+
   const updateProfile = async (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => {
     setStats((prev) => {
       const updated = {
@@ -334,6 +350,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfile,
         toggleSound,
         toggleHaptics,
+        toggleFastAnswerOpportunity,
         resetProgress,
         exportBackupData,
         importBackupData,

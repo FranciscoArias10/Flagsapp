@@ -104,7 +104,7 @@ type ScreenMode = 'difficulty_select' | 'playing' | 'game_over';
 export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult } = useGame();
+  const { recordAnswer, recordQuizResult, stats } = useGame();
 
   const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BlitzDifficulty>('medium');
@@ -120,6 +120,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const [showConfetti, setShowConfetti] = useState(false);
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Retry & Second Chance mechanics
+  const [isRetryRound, setIsRetryRound] = useState(false);
+  const [retryCountryCodes, setRetryCountryCodes] = useState<string[]>([]);
+  const [hasSecondChance, setHasSecondChance] = useState(false);
+  const [eliminatedOptionIdx, setEliminatedOptionIdx] = useState<number | null>(null);
+  const questionStartTimeRef = useRef<number>(Date.now());
 
   // Animations
   const timerScale = useRef(new Animated.Value(1)).current;
@@ -162,8 +169,16 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     }
   }, [screenMode, timeLeft, selectedDifficulty]);
 
-  const generateNextQuestion = () => {
-    const randomTarget = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
+  const generateNextQuestion = (poolParam?: string[]) => {
+    const poolCodes = poolParam || (isRetryRound ? retryCountryCodes : null);
+    let randomTarget: Country;
+    if (poolCodes && poolCodes.length > 0) {
+      const targetCode = poolCodes[Math.floor(Math.random() * poolCodes.length)];
+      randomTarget = COUNTRIES.find((c) => c.code === targetCode) || COUNTRIES[0];
+    } else {
+      randomTarget = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
+    }
+
     const distractors = COUNTRIES
       .filter((c) => c.code !== randomTarget.code)
       .sort(() => 0.5 - Math.random())
@@ -174,7 +189,9 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
     setCurrentQ({ target: randomTarget, options, correctIndex });
     setSelectedIdx(null);
+    setEliminatedOptionIdx(null);
     setIsAnswered(false);
+    questionStartTimeRef.current = Date.now();
 
     cardScale.setValue(0.94);
     Animated.spring(cardScale, { toValue: 1, friction: 6, useNativeDriver: true }).start();
@@ -196,6 +213,10 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     if (countParam !== undefined) {
       setSelectedQuestionCount(countParam);
     }
+    setIsRetryRound(false);
+    setRetryCountryCodes([]);
+    setEliminatedOptionIdx(null);
+    setHasSecondChance(false);
     setTimeLeft(BLITZ_DIFFICULTIES[diff].seconds);
     setScore(0);
     setStreak(0);
@@ -210,6 +231,30 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     generateNextQuestion();
   };
 
+  const startRetryFailedBlitz = () => {
+    const failedItems = reviewItems.filter((i) => !i.isCorrect);
+    if (failedItems.length === 0) return;
+
+    soundService.triggerSelection();
+    setIsRetryRound(true);
+    const failedCodes = failedItems.map((f) => f.countryCode).filter(Boolean) as string[];
+    setRetryCountryCodes(failedCodes);
+    setTimeLeft(BLITZ_DIFFICULTIES[selectedDifficulty].seconds);
+    setScore(0);
+    setStreak(0);
+    setHighestStreak(0);
+    setReviewItems([]);
+    setShowConfetti(false);
+    setShowReviewModal(false);
+    setBonusText(null);
+    setSelectedIdx(null);
+    setEliminatedOptionIdx(null);
+    setHasSecondChance(false);
+    setIsAnswered(false);
+    setScreenMode('playing');
+    generateNextQuestion(failedCodes);
+  };
+
   const restartBlitz = () => {
     startBlitzWithDifficulty(selectedDifficulty);
   };
@@ -220,12 +265,30 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   };
 
   const handleSelectOption = (idx: number) => {
-    if (isAnswered || !currentQ || screenMode !== 'playing') return;
+    if (isAnswered || !currentQ || screenMode !== 'playing' || eliminatedOptionIdx === idx) return;
+
+    const isCorrect = idx === currentQ.correctIndex;
+    const fastOpportunityEnabled = stats.fastAnswerOpportunityEnabled !== false;
+    const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+
+    // Fast Answer Second Chance Shield Defense
+    if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
+      setHasSecondChance(false);
+      setEliminatedOptionIdx(idx);
+      soundService.triggerSelection();
+      showBonusPopup('🛡️ ¡Escudo Salvavidas! 0s penalización');
+      return;
+    }
 
     setSelectedIdx(idx);
     setIsAnswered(true);
 
-    const isCorrect = idx === currentQ.correctIndex;
+    // Fast Answer Second Chance Shield Reward (ultra fast in blitz: <= 1.8s)
+    if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 1.8) {
+      setHasSecondChance(true);
+      showBonusPopup('⚡ ¡Relámpago! +1 Escudo 🛡️');
+    }
+
     const userAnswer = currentQ.options[idx]?.name || '';
     const correctAnswer = currentQ.options[currentQ.correctIndex]?.name || '';
     const diffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
@@ -516,10 +579,19 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           </View>
 
           <View style={styles.actions}>
+            {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
+              <AppleButton
+                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                onPress={startRetryFailedBlitz}
+                variant="gradient"
+                style={{ width: '100%', marginBottom: 10 }}
+              />
+            )}
+
             <AppleButton
               title={`Jugar Otra Vez (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
               onPress={restartBlitz}
-              variant="gradient"
+              variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={{ width: '100%' }}
             />
             <AppleButton
@@ -544,7 +616,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={`Recuento Blitz (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
+          title={isRetryRound ? "Recuento de Repaso Blitz" : `Recuento Blitz (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
+          onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedBlitz : undefined}
         />
       </View>
     );
@@ -584,6 +657,12 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
         {/* Streak & Score */}
         <View style={styles.headerRight}>
+          {hasSecondChance && (
+            <View style={styles.shieldPillBlitz}>
+              <Ionicons name="shield-checkmark" size={12} color="#0284C7" />
+              <Text style={styles.shieldPillBlitzText}>Escudo</Text>
+            </View>
+          )}
           <StreakBadge streak={streak} size="small" />
           <View style={styles.scorePill}>
             <Text style={styles.scorePillText}>
@@ -592,6 +671,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           </View>
         </View>
       </View>
+
+      {isRetryRound && (
+        <View style={styles.retryBadgeBar}>
+          <Ionicons name="repeat" size={12} color="#D97706" />
+          <Text style={styles.retryBadgeBarText}>REPASO BLITZ ({retryCountryCodes.length} FALLOS)</Text>
+        </View>
+      )}
 
       {/* Bonus / Penalty Popup */}
       {bonusText && (
@@ -634,9 +720,12 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
         {currentQ.options.map((option, idx) => {
           const isSelected = selectedIdx === idx;
           const isCorrect = idx === currentQ.correctIndex;
+          const isEliminated = eliminatedOptionIdx === idx;
 
           let optionStyle = styles.optBase;
-          if (isAnswered) {
+          if (isEliminated) {
+            optionStyle = styles.optEliminated;
+          } else if (isAnswered) {
             if (isCorrect) optionStyle = styles.optCorrect;
             else if (isSelected) optionStyle = styles.optWrong;
           }
@@ -645,18 +734,26 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             <Pressable
               key={option.code}
               onPress={() => handleSelectOption(idx)}
-              disabled={isAnswered}
+              disabled={isAnswered || isEliminated}
               style={[styles.optButton, optionStyle]}
             >
               <Text
                 style={[
                   styles.optText,
+                  isEliminated && styles.optTextEliminated,
                   isAnswered && isCorrect && styles.optTextCorrect,
                   isAnswered && isSelected && !isCorrect && styles.optTextWrong,
                 ]}
               >
                 {option.name}
               </Text>
+              {isEliminated ? (
+                <Ionicons name="shield" size={16} color={IOSColors.systemRed} />
+              ) : isAnswered && isCorrect ? (
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+              ) : isAnswered && isSelected ? (
+                <Ionicons name="close-circle" size={18} color="#FFFFFF" />
+              ) : null}
             </Pressable>
           );
         })}
@@ -1059,5 +1156,52 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: IOSColors.secondaryLabel,
+  },
+  shieldPillBlitz: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 132, 199, 0.3)',
+    gap: 3,
+    marginRight: 6,
+  },
+  shieldPillBlitzText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  retryBadgeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    gap: 5,
+    alignSelf: 'center',
+  },
+  retryBadgeBarText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D97706',
+    letterSpacing: 0.5,
+  },
+  optEliminated: {
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+    opacity: 0.6,
+  },
+  optTextEliminated: {
+    color: IOSColors.systemRed,
+    textDecorationLine: 'line-through',
   },
 });

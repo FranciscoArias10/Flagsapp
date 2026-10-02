@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Animated,
   Pressable,
+  StyleProp,
   ViewStyle,
   TextStyle,
   View,
@@ -18,7 +19,7 @@ interface AppleButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'success' | 'danger' | 'gradient';
   icon?: React.ReactNode;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   textStyle?: TextStyle;
   size?: 'small' | 'medium' | 'large';
   hapticStyle?: 'light' | 'medium' | 'heavy' | 'selection';

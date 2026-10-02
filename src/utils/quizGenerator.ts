@@ -91,6 +91,40 @@ export const generateQuizQuestions = (
   });
 };
 
+export const generateQuizQuestionsFromCountries = (
+  targetCountries: Country[],
+  quizType: QuizType = 'flag_to_name',
+  continent?: Continent | 'Mundo'
+): QuizQuestion[] => {
+  let pool = COUNTRIES;
+  if (continent && continent !== 'Mundo') {
+    const continentPool = COUNTRIES.filter((c) => c.continent === continent);
+    if (continentPool.length >= 4) {
+      pool = continentPool;
+    }
+  }
+
+  const shuffledTargets = shuffleArray(targetCountries);
+
+  return shuffledTargets.map((target, idx) => {
+    const otherCountries = (
+      pool.length >= 4 ? pool : COUNTRIES
+    ).filter((c) => c.code !== target.code);
+
+    const distractors = shuffleArray(otherCountries).slice(0, 3);
+    const options = shuffleArray([target, ...distractors]);
+    const correctIndex = options.findIndex((c) => c.code === target.code);
+
+    return {
+      id: `retry_q_${idx}_${target.code}_${Date.now()}`,
+      targetCountry: target,
+      options,
+      correctOptionIndex: correctIndex,
+      questionType: quizType,
+    };
+  });
+};
+
 export const calculateStars = (score: number, total: number): number => {
   if (total <= 0) return 0;
   const percentage = (score / total) * 100;

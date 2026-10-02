@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Country, QuizQuestion, QuizResult, Continent, AnswerReviewItem } from '../types';
-import { generateQuizQuestions, calculateStars, calculateXpEarned } from '../utils/quizGenerator';
+import { generateQuizQuestions, generateQuizQuestionsFromCountries, calculateStars, calculateXpEarned } from '../utils/quizGenerator';
+import { COUNTRIES } from '../data/countries';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 import { FlagImage } from '../components/FlagImage';
@@ -38,7 +39,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult } = useGame();
+  const { recordAnswer, recordQuizResult, stats } = useGame();
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
   const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(initialTimeLimit);
@@ -53,6 +54,13 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const [showConfetti, setShowConfetti] = useState(false);
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Retry & Second Chance mechanics
+  const [isRetryRound, setIsRetryRound] = useState(false);
+  const [hasSecondChance, setHasSecondChance] = useState(false);
+  const [shieldMessage, setShieldMessage] = useState<string | null>(null);
+  const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
+  const questionStartTimeRef = useRef<number>(Date.now());
 
   const [timeLeft, setTimeLeft] = useState(initialTimeLimit);
   const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -145,10 +153,14 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     setTimeLeft(timeParam);
     const targetCount = countParam === 'all' ? 999 : countParam;
     const generated = generateQuizQuestions(targetCount, continent, 'flag_to_name');
+    setIsRetryRound(false);
     setQuestions(generated);
     setCurrentIndex(0);
     setSelectedOptionIndex(null);
     setIsAnswered(false);
+    setEliminatedOptions([]);
+    setHasSecondChance(false);
+    setShieldMessage(null);
     setScore(0);
     setCurrentStreak(0);
     setHighestStreak(0);
@@ -156,6 +168,46 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     setShowSummary(false);
     setShowConfetti(false);
     setShowReviewModal(false);
+    questionStartTimeRef.current = Date.now();
+    animateQuestionIn();
+  };
+
+  const startRetryFailedQuestions = () => {
+    const failedItems = reviewItems.filter((i) => !i.isCorrect);
+    if (failedItems.length === 0) return;
+
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+    countdownAnim.stopAnimation();
+    countdownAnim.setValue(0);
+    setTimeLeft(questionTimeLimit);
+
+    const failedCodes = failedItems.map((f) => f.countryCode).filter(Boolean);
+    const failedCountries = COUNTRIES.filter((c) => failedCodes.includes(c.code));
+    const retryQs = generateQuizQuestionsFromCountries(failedCountries, 'flag_to_name', continent);
+
+    setIsRetryRound(true);
+    setQuestions(retryQs);
+    setCurrentIndex(0);
+    setSelectedOptionIndex(null);
+    setIsAnswered(false);
+    setEliminatedOptions([]);
+    setHasSecondChance(false);
+    setShieldMessage(null);
+    setScore(0);
+    setCurrentStreak(0);
+    setHighestStreak(0);
+    setReviewItems([]);
+    setShowSummary(false);
+    setShowConfetti(false);
+    setShowReviewModal(false);
+    questionStartTimeRef.current = Date.now();
     animateQuestionIn();
   };
 
@@ -234,7 +286,25 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   };
 
   const handleSelectOption = (index: number) => {
-    if (isAnswered) return;
+    if (isAnswered || eliminatedOptions.includes(index)) return;
+
+    const currentQ = questions[currentIndex];
+    const isCorrect = index === currentQ.correctOptionIndex;
+    const fastOpportunityEnabled = stats.fastAnswerOpportunityEnabled !== false;
+    const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+
+    // Fast Answer Second Chance Shield Defense
+    if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
+      setHasSecondChance(false);
+      setEliminatedOptions((prev) => [...prev, index]);
+      soundService.triggerSelection();
+      triggerShake();
+      setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta pregunta');
+      // Give buffer so they can read and try again without instant timeout
+      setTimeLeft((prev) => Math.max(prev, 5));
+      return;
+    }
+
     if (questionTimerRef.current) {
       clearInterval(questionTimerRef.current);
       questionTimerRef.current = null;
@@ -243,10 +313,15 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     setSelectedOptionIndex(index);
     setIsAnswered(true);
 
-    const currentQ = questions[currentIndex];
-    const isCorrect = index === currentQ.correctOptionIndex;
     const userAnswer = currentQ.options[index]?.name || '';
     const correctAnswer = currentQ.options[currentQ.correctOptionIndex]?.name || '';
+
+    // Fast Answer Second Chance Shield Reward (on lightning-fast correct answer)
+    if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 2.5) {
+      setHasSecondChance(true);
+      setShieldMessage('⚡ ¡Respuesta Relámpago! Ganaste 1 Segunda Oportunidad 🛡️');
+      setTimeout(() => setShieldMessage(null), 3000);
+    }
 
     // Record for the review breakdown
     setReviewItems((prev) => [
@@ -316,6 +391,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       setCurrentIndex((prev) => prev + 1);
       setSelectedOptionIndex(null);
       setIsAnswered(false);
+      setEliminatedOptions([]);
+      setShieldMessage(null);
+      questionStartTimeRef.current = Date.now();
       animateQuestionIn();
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     } else {
@@ -452,10 +530,19 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
           {/* Action Buttons */}
           <View style={styles.summaryActions}>
+            {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
+              <AppleButton
+                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                onPress={startRetryFailedQuestions}
+                variant="gradient"
+                style={[styles.actionBtn, { marginBottom: 10 }]}
+              />
+            )}
+
             <AppleButton
               title={`Jugar Otra Vez (${questionCount === 'all' ? 'Todas' : `${questionCount} Qs`})`}
               onPress={() => startNewGame()}
-              variant="gradient"
+              variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={styles.actionBtn}
             />
 
@@ -501,7 +588,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title="Recuento de Quiz"
+          title={isRetryRound ? "Recuento de Repaso" : "Recuento de Quiz"}
+          onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedQuestions : undefined}
         />
       </View>
     );
@@ -528,6 +616,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           </View>
 
           <View style={styles.headerRight}>
+            {hasSecondChance && (
+              <View style={styles.shieldPill}>
+                <Ionicons name="shield-checkmark" size={13} color="#0284C7" />
+                <Text style={styles.shieldPillText}>2ª Oportunidad</Text>
+              </View>
+            )}
             <View style={styles.scorePill}>
               <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
               <Text style={styles.scorePillText}>{score} pts</Text>
@@ -542,6 +636,31 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
+
+        {isRetryRound && (
+          <View style={styles.retryBadgeBar}>
+            <Ionicons name="repeat" size={12} color="#D97706" />
+            <Text style={styles.retryBadgeBarText}>MODO REPASO DE FALLOS</Text>
+          </View>
+        )}
+
+        {shieldMessage && (
+          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
+            <Ionicons
+              name={shieldMessage.includes('Relámpago') ? 'flash' : 'shield-checkmark'}
+              size={15}
+              color={shieldMessage.includes('Relámpago') ? '#D97706' : '#0284C7'}
+            />
+            <Text
+              style={[
+                styles.shieldBannerText,
+                { color: shieldMessage.includes('Relámpago') ? '#92400E' : '#0369A1' },
+              ]}
+            >
+              {shieldMessage}
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -598,12 +717,17 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             const isSelected = selectedOptionIndex === idx;
             const isCorrectOption = idx === currentQ.correctOptionIndex;
             const isTimeout = isAnswered && selectedOptionIndex === null;
+            const isEliminated = eliminatedOptions.includes(idx);
 
             let cardStyle: any = styles.optionNormal;
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
             let iconColor = IOSColors.secondaryLabel;
 
-            if (isAnswered) {
+            if (isEliminated) {
+              cardStyle = styles.optionEliminated;
+              iconName = 'close-circle';
+              iconColor = IOSColors.systemRed;
+            } else if (isAnswered) {
               if (isTimeout) {
                 if (isCorrectOption) {
                   cardStyle = styles.optionTimeoutReveal;
@@ -625,12 +749,13 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               <Pressable
                 key={option.code}
                 onPress={() => handleSelectOption(idx)}
-                disabled={isAnswered}
+                disabled={isAnswered || isEliminated}
                 style={[styles.optionCard, cardStyle]}
               >
                 <Text
                   style={[
                     styles.optionText,
+                    isEliminated && styles.optionTextEliminated,
                     isAnswered && !isTimeout && isCorrectOption && styles.optionTextCorrect,
                     isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
                     isTimeout && isCorrectOption && styles.optionTextTimeoutReveal,
@@ -639,7 +764,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 >
                   {option.name}
                 </Text>
-                {isTimeout && isCorrectOption ? (
+                {isEliminated ? (
+                  <View style={styles.eliminatedBadge}>
+                    <Ionicons name="shield" size={11} color={IOSColors.systemRed} />
+                    <Text style={styles.eliminatedBadgeText}>Descartada</Text>
+                  </View>
+                ) : isTimeout && isCorrectOption ? (
                   <View style={styles.timeoutAnswerBadge}>
                     <Ionicons name="information-circle" size={13} color="#D97706" />
                     <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
@@ -1205,5 +1335,90 @@ const styles = StyleSheet.create({
   },
   summaryCountChipTextActive: {
     color: '#FFFFFF',
+  },
+  shieldPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 132, 199, 0.3)',
+    gap: 4,
+  },
+  shieldPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  retryBadgeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    marginTop: 6,
+    gap: 5,
+    alignSelf: 'center',
+  },
+  retryBadgeBarText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D97706',
+    letterSpacing: 0.5,
+  },
+  shieldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    gap: 7,
+  },
+  shieldBannerReward: {
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  shieldBannerDefend: {
+    backgroundColor: 'rgba(2, 132, 199, 0.14)',
+    borderColor: 'rgba(2, 132, 199, 0.35)',
+  },
+  shieldBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  optionEliminated: {
+    backgroundColor: 'rgba(255, 59, 48, 0.06)',
+    borderColor: 'rgba(255, 59, 48, 0.25)',
+    opacity: 0.65,
+  },
+  optionTextEliminated: {
+    color: IOSColors.systemRed,
+    textDecorationLine: 'line-through',
+  },
+  eliminatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  eliminatedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: IOSColors.systemRed,
   },
 });

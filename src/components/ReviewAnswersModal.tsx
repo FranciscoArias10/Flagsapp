@@ -21,6 +21,7 @@ interface ReviewAnswersModalProps {
   onClose: () => void;
   items: AnswerReviewItem[];
   title?: string;
+  onRetryFailures?: () => void;
 }
 
 type FilterType = 'all' | 'correct' | 'wrong';
@@ -30,6 +31,7 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
   onClose,
   items,
   title = 'Recuento de Respuestas',
+  onRetryFailures,
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
@@ -222,11 +224,26 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
             })
           )}
 
-          <View style={{ marginTop: 16 }}>
+          {wrongCount > 0 && onRetryFailures && (
+            <View style={{ marginTop: 16 }}>
+              <AppleButton
+                title={`🔁 Repasar los ${wrongCount} Fallos`}
+                onPress={() => {
+                  soundService.triggerSelection();
+                  onClose();
+                  onRetryFailures();
+                }}
+                variant="gradient"
+                style={{ width: '100%', marginBottom: 10 }}
+              />
+            </View>
+          )}
+
+          <View style={{ marginTop: wrongCount > 0 && onRetryFailures ? 0 : 16 }}>
             <AppleButton
               title="Volver a Resultados"
               onPress={handleClose}
-              variant="gradient"
+              variant={wrongCount > 0 && onRetryFailures ? 'secondary' : 'gradient'}
               style={{ width: '100%' }}
             />
           </View>

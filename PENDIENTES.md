@@ -6,8 +6,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
-- [ ] **Modo Repaso de Fallos (Review & Retry)**:
-  - En la pantalla de resultados de cualquier juego (Banderas, Capitales, Blitz), botón para iniciar una ronda de práctica inmediata compuesta únicamente por las preguntas que el jugador falló.
 - [ ] **Modo Estudio / Quiz desde el Atlas**:
   - En la ficha detallada de cada país en el Atlas, botón de *"Poner a prueba este país"* para abrir una micro-pregunta sobre su bandera y capital.
 
@@ -38,6 +36,14 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Modo Repaso de Fallos (Review & Retry)**:
+  - Botón interactivo `🔁 Repasar Fallos (X)` en la pantalla de fin de partida de Banderas, Capitales y Blitz, así como dentro de `ReviewAnswersModal`.
+  - Generación de rondas de práctica exclusivas con los países que el usuario falló para consolidar el aprendizaje al instante.
+  - Badge de estado `🎯 MODO REPASO` en cabecera durante la sesión.
+- [x] **Mecánica Dinámica: Segunda Oportunidad Veloz (Speed Shield)**:
+  - Contestar con precisión a máxima velocidad (&lt; 2.5s en Banderas/Capitales, &lt; 1.8s en Blitz) otorga un escudo de perdón `🛡️ Segunda Oportunidad`.
+  - Si el jugador se equivoca con el escudo activo, se consume el escudo, la opción errónea queda tachada/descartada con badge y se le permite volver a intentar sin perder racha ni tiempo.
+  - Interruptor en **Ajustes de la Aplicación** (Perfil) para desactivar la función y jugar con reglas clásicas retro.
 - [x] **Selector de Cantidad de Preguntas (10, 20, 50 o Todo el Catálogo)**:
   - Selector disponible en la pantalla principal para el Quiz de Banderas y en la pantalla de dificultad de Capitales.
   - Adaptación automática del total de preguntas, progreso dinámico, cálculo de estrellas y bonificaciones de XP por maratón.

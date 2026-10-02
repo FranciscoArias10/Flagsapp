@@ -72,6 +72,7 @@ export interface UserStats {
   unlockedAchievements: string[];
   soundEnabled: boolean;
   hapticsEnabled: boolean;
+  fastAnswerOpportunityEnabled?: boolean;
 }
 
 export type TabType = 'play' | 'capitals' | 'atlas' | 'profile';

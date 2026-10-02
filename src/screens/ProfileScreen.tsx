@@ -29,7 +29,7 @@ const AVATARS = ['🧭', '🦁', '🚀', '🦅', '👑', '⚡', '🌍', '🦊', 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, resetProgress, exportBackupData, importBackupData } = useGame();
+  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, toggleFastAnswerOpportunity, resetProgress, exportBackupData, importBackupData } = useGame();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState(stats.username || 'Explorador');
@@ -390,6 +390,25 @@ export const ProfileScreen: React.FC = () => {
             <Switch
               value={stats.hapticsEnabled}
               onValueChange={toggleHaptics}
+              trackColor={{ false: '#E5E5EA', true: IOSColors.systemGreen }}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.settingRow}>
+            <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
+              <Ionicons name="flash" size={22} color={IOSColors.systemOrange} style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingTitle}>Segunda Oportunidad Veloz</Text>
+                <Text style={styles.settingSubtitle}>
+                  Gana un escudo de perdón al responder en &lt; 2.5s. Desactívalo para el modo clásico sin ayudas.
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={stats.fastAnswerOpportunityEnabled !== false}
+              onValueChange={toggleFastAnswerOpportunity}
               trackColor={{ false: '#E5E5EA', true: IOSColors.systemGreen }}
             />
           </View>
@@ -1056,6 +1075,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: IOSColors.label,
+  },
+  settingSubtitle: {
+    fontSize: 12,
+    color: IOSColors.secondaryLabel,
+    marginTop: 2,
+    lineHeight: 16,
   },
   divider: {
     height: 0.5,

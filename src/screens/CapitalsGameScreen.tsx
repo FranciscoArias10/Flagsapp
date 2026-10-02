@@ -147,6 +147,13 @@ export const CapitalsGameScreen: React.FC = () => {
   const [reviewItems, setReviewItems] = useState<AnswerReviewItem[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  // Retry & Second Chance mechanics
+  const [isRetryRound, setIsRetryRound] = useState(false);
+  const [hasSecondChance, setHasSecondChance] = useState(false);
+  const [shieldMessage, setShieldMessage] = useState<string | null>(null);
+  const [eliminatedCapitals, setEliminatedCapitals] = useState<string[]>([]);
+  const questionStartTimeRef = useRef<number>(Date.now());
+
   const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(15);
   const [pendingDifficulty, setPendingDifficulty] = useState<CapitalDifficultyConfig | null>(null);
   const [timeLeft, setTimeLeft] = useState(questionTimeLimit);
@@ -301,10 +308,14 @@ export const CapitalsGameScreen: React.FC = () => {
     countdownAnim.setValue(0);
     setTimeLeft(timeLimit);
     const qs = generateCapitalQuestions(count, difficulty);
+    setIsRetryRound(false);
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
     setIsAnswered(false);
+    setEliminatedCapitals([]);
+    setHasSecondChance(false);
+    setShieldMessage(null);
     setScore(0);
     setStreak(0);
     setHighestStreak(0);
@@ -312,6 +323,70 @@ export const CapitalsGameScreen: React.FC = () => {
     setShowSummary(false);
     setShowConfetti(false);
     setShowReviewModal(false);
+    questionStartTimeRef.current = Date.now();
+    animateCard();
+  };
+
+  const startRetryFailedCapitals = () => {
+    const failedItems = reviewItems.filter((i) => !i.isCorrect);
+    if (failedItems.length === 0) return;
+
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+    countdownAnim.stopAnimation();
+    countdownAnim.setValue(0);
+    setTimeLeft(questionTimeLimit);
+
+    const failedCodes = failedItems.map((f) => f.countryCode).filter(Boolean);
+    const failedCountries = COUNTRIES.filter((c) => failedCodes.includes(c.code));
+
+    const retryQs: CapitalQuestion[] = failedCountries.map((country) => {
+      const sameCountryCities = (COUNTRY_CITIES[country.code] || [])
+        .filter((cityName) => cityName.toLowerCase().trim() !== country.capital.toLowerCase().trim());
+
+      let distractors: string[] = [];
+      if (sameCountryCities.length >= 3) {
+        distractors = shuffleArray(sameCountryCities).slice(0, 3);
+      } else {
+        const fallbackCities = [...sameCountryCities];
+        const otherCapitals = COUNTRIES
+          .filter((c) => c.capital !== country.capital && !fallbackCities.includes(c.capital))
+          .map((c) => c.capital);
+        const extraNeeded = 3 - fallbackCities.length;
+        const extraCapitals = shuffleArray(otherCapitals).slice(0, extraNeeded);
+        distractors = [...fallbackCities, ...extraCapitals];
+      }
+
+      const options = shuffleArray([country.capital, ...distractors]);
+      return {
+        country,
+        options,
+        correctCapital: country.capital,
+      };
+    });
+
+    setIsRetryRound(true);
+    setQuestions(retryQs);
+    setCurrentIndex(0);
+    setSelectedCapital(null);
+    setIsAnswered(false);
+    setEliminatedCapitals([]);
+    setHasSecondChance(false);
+    setShieldMessage(null);
+    setScore(0);
+    setStreak(0);
+    setHighestStreak(0);
+    setReviewItems([]);
+    setShowSummary(false);
+    setShowConfetti(false);
+    setShowReviewModal(false);
+    questionStartTimeRef.current = Date.now();
     animateCard();
   };
 
@@ -385,7 +460,24 @@ export const CapitalsGameScreen: React.FC = () => {
   };
 
   const handleSelectCapital = (cap: string) => {
-    if (isAnswered) return;
+    if (isAnswered || eliminatedCapitals.includes(cap)) return;
+
+    const currentQ = questions[currentIndex];
+    const isCorrect = cap === currentQ.correctCapital;
+    const fastOpportunityEnabled = stats.fastAnswerOpportunityEnabled !== false;
+    const elapsedSeconds = (Date.now() - questionStartTimeRef.current) / 1000;
+
+    // Fast Answer Second Chance Shield Defense
+    if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
+      setHasSecondChance(false);
+      setEliminatedCapitals((prev) => [...prev, cap]);
+      soundService.triggerSelection();
+      triggerShake();
+      setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta capital');
+      setTimeLeft((prev) => Math.max(prev, 5));
+      return;
+    }
+
     if (questionTimerRef.current) {
       clearInterval(questionTimerRef.current);
       questionTimerRef.current = null;
@@ -394,8 +486,12 @@ export const CapitalsGameScreen: React.FC = () => {
     setSelectedCapital(cap);
     setIsAnswered(true);
 
-    const currentQ = questions[currentIndex];
-    const isCorrect = cap === currentQ.correctCapital;
+    // Fast Answer Second Chance Shield Reward
+    if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 2.5) {
+      setHasSecondChance(true);
+      setShieldMessage('⚡ ¡Respuesta Relámpago! Ganaste 1 Segunda Oportunidad 🛡️');
+      setTimeout(() => setShieldMessage(null), 3000);
+    }
 
     // Record review item
     setReviewItems((prev) => [
@@ -465,6 +561,9 @@ export const CapitalsGameScreen: React.FC = () => {
       setCurrentIndex((prev) => prev + 1);
       setSelectedCapital(null);
       setIsAnswered(false);
+      setEliminatedCapitals([]);
+      setShieldMessage(null);
+      questionStartTimeRef.current = Date.now();
       animateCard();
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     } else {
@@ -727,10 +826,19 @@ export const CapitalsGameScreen: React.FC = () => {
           </View>
 
           <View style={styles.summaryActions}>
+            {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
+              <AppleButton
+                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                onPress={startRetryFailedCapitals}
+                variant="gradient"
+                style={{ width: '100%', marginBottom: 10 }}
+              />
+            )}
+
             <AppleButton
               title={`Jugar de Nuevo (${currentDiffConfig.shortName})`}
               onPress={() => startNewRound(selectedDifficulty, selectedQuestionCount)}
-              variant="gradient"
+              variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={{ width: '100%', marginBottom: 8 }}
             />
 
@@ -780,7 +888,8 @@ export const CapitalsGameScreen: React.FC = () => {
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={`Recuento de Capitales (${currentDiffConfig.shortName})`}
+          title={isRetryRound ? "Recuento de Repaso" : `Recuento de Capitales (${currentDiffConfig.shortName})`}
+          onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedCapitals : undefined}
         />
       </View>
     );
@@ -814,6 +923,12 @@ export const CapitalsGameScreen: React.FC = () => {
           </View>
 
           <View style={styles.headerRight}>
+            {hasSecondChance && (
+              <View style={styles.shieldPill}>
+                <Ionicons name="shield-checkmark" size={13} color="#0284C7" />
+                <Text style={styles.shieldPillText}>2ª Oportunidad</Text>
+              </View>
+            )}
             <View style={styles.scorePill}>
               <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
               <Text style={styles.scorePillText}>{score} pts</Text>
@@ -832,6 +947,31 @@ export const CapitalsGameScreen: React.FC = () => {
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
+
+        {isRetryRound && (
+          <View style={styles.retryBadgeBar}>
+            <Ionicons name="repeat" size={12} color="#D97706" />
+            <Text style={styles.retryBadgeBarText}>MODO REPASO DE CAPITALES</Text>
+          </View>
+        )}
+
+        {shieldMessage && (
+          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
+            <Ionicons
+              name={shieldMessage.includes('Relámpago') ? 'flash' : 'shield-checkmark'}
+              size={15}
+              color={shieldMessage.includes('Relámpago') ? '#D97706' : '#0284C7'}
+            />
+            <Text
+              style={[
+                styles.shieldBannerText,
+                { color: shieldMessage.includes('Relámpago') ? '#92400E' : '#0369A1' },
+              ]}
+            >
+              {shieldMessage}
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -888,12 +1028,17 @@ export const CapitalsGameScreen: React.FC = () => {
             const isSelected = selectedCapital === cap;
             const isCorrect = cap === currentQ.correctCapital;
             const isTimeout = isAnswered && selectedCapital === null;
+            const isEliminated = eliminatedCapitals.includes(cap);
 
             let cardStyle: any = styles.choiceNormal;
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
             let iconColor = IOSColors.secondaryLabel;
 
-            if (isAnswered) {
+            if (isEliminated) {
+              cardStyle = styles.choiceEliminated;
+              iconName = 'close-circle';
+              iconColor = IOSColors.systemRed;
+            } else if (isAnswered) {
               if (isTimeout) {
                 if (isCorrect) {
                   cardStyle = styles.choiceTimeoutReveal;
@@ -915,7 +1060,7 @@ export const CapitalsGameScreen: React.FC = () => {
               <Pressable
                 key={cap}
                 onPress={() => handleSelectCapital(cap)}
-                disabled={isAnswered}
+                disabled={isAnswered || isEliminated}
                 style={[styles.choiceCard, cardStyle]}
               >
                 <View style={styles.choiceRow}>
@@ -923,7 +1068,9 @@ export const CapitalsGameScreen: React.FC = () => {
                     name="business-outline"
                     size={20}
                     color={
-                      isAnswered && !isTimeout && isCorrect
+                      isEliminated
+                        ? IOSColors.systemRed
+                        : isAnswered && !isTimeout && isCorrect
                         ? IOSColors.systemGreen
                         : isAnswered && isSelected
                         ? IOSColors.systemRed
@@ -938,6 +1085,7 @@ export const CapitalsGameScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.choiceText,
+                      isEliminated && styles.textEliminated,
                       isAnswered && !isTimeout && isCorrect && styles.textCorrect,
                       isAnswered && isSelected && !isCorrect && styles.textWrong,
                       isTimeout && isCorrect && styles.textTimeoutReveal,
@@ -947,7 +1095,12 @@ export const CapitalsGameScreen: React.FC = () => {
                     {cap}
                   </Text>
                 </View>
-                {isTimeout && isCorrect ? (
+                {isEliminated ? (
+                  <View style={styles.eliminatedBadge}>
+                    <Ionicons name="shield" size={11} color={IOSColors.systemRed} />
+                    <Text style={styles.eliminatedBadgeText}>Descartada</Text>
+                  </View>
+                ) : isTimeout && isCorrect ? (
                   <View style={styles.timeoutAnswerBadge}>
                     <Ionicons name="information-circle" size={13} color="#D97706" />
                     <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
@@ -1704,5 +1857,90 @@ const styles = StyleSheet.create({
   },
   summaryCountChipTextActive: {
     color: '#FFFFFF',
+  },
+  shieldPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 132, 199, 0.3)',
+    gap: 4,
+  },
+  shieldPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  retryBadgeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    marginTop: 6,
+    gap: 5,
+    alignSelf: 'center',
+  },
+  retryBadgeBarText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D97706',
+    letterSpacing: 0.5,
+  },
+  shieldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    gap: 7,
+  },
+  shieldBannerReward: {
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  shieldBannerDefend: {
+    backgroundColor: 'rgba(2, 132, 199, 0.14)',
+    borderColor: 'rgba(2, 132, 199, 0.35)',
+  },
+  shieldBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  choiceEliminated: {
+    backgroundColor: 'rgba(255, 59, 48, 0.06)',
+    borderColor: 'rgba(255, 59, 48, 0.25)',
+    opacity: 0.65,
+  },
+  textEliminated: {
+    color: IOSColors.systemRed,
+    textDecorationLine: 'line-through',
+  },
+  eliminatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  eliminatedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: IOSColors.systemRed,
   },
 });
