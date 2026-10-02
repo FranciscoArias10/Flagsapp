@@ -176,7 +176,7 @@ export const ProfileScreen: React.FC = () => {
       <AppleHeader title="Perfil" category="JUGADOR" />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card with Custom Avatar & Nickname */}
@@ -839,14 +839,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   statBox: {
     width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
+    marginBottom: 12,
     alignItems: 'center',
     ...IOSColors.cardShadow,
   },

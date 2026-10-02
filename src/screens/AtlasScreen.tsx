@@ -144,7 +144,7 @@ export const AtlasScreen: React.FC = () => {
         data={filteredCountries}
         keyExtractor={(item) => item.code}
         renderItem={renderCountryItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
