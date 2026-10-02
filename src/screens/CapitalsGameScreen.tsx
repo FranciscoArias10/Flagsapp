@@ -652,7 +652,7 @@ export const CapitalsGameScreen: React.FC = () => {
         {/* Header bar */}
         <View style={styles.diffHeaderBar}>
           <View style={styles.diffHeaderTopRow}>
-            <Text style={styles.diffPretitle}>TRIVIA & APRENDIZAJE</Text>
+            <Text style={styles.diffPretitle} numberOfLines={1}>TRIVIA & APRENDIZAJE</Text>
             <View style={styles.headerRight}>
               <StreakBadge streak={stats.streak} size="small" />
               <View style={styles.xpPill}>
@@ -668,7 +668,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
         <ScrollView
           style={styles.diffScroll}
-          contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 100 + insets.bottom }]}
+          contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 130 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.diffSubtitle}>
@@ -1407,9 +1407,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   choiceText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
     color: IOSColors.label,
+    flex: 1,
+    minWidth: 0,
   },
   textCorrect: {
     color: IOSColors.systemGreen,
@@ -1670,6 +1672,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: IOSColors.systemPurple,
     letterSpacing: 1.4,
+    flex: 1,
+    marginRight: 8,
   },
   diffTitle: {
     fontSize: 26,
