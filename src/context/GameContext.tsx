@@ -115,7 +115,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         soundService.setPreferences(parsed.soundEnabled, parsed.hapticsEnabled);
       }
       if (savedAchievements) {
-        setAchievements(JSON.parse(savedAchievements));
+        const parsedAch: Achievement[] = JSON.parse(savedAchievements);
+        const merged = INITIAL_ACHIEVEMENTS.map((initial) => {
+          const found = parsedAch.find((a) => a.id === initial.id);
+          return found ? { ...initial, ...found } : initial;
+        });
+        setAchievements(merged);
       }
     } catch (e) {
       console.warn('Error loading storage', e);
@@ -133,40 +138,124 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const checkAchievements = (newStats: UserStats, currentStreak: number, quizScore?: number, totalQ?: number) => {
+  const checkAchievements = (
+    newStats: UserStats,
+    currentStreak: number,
+    quizScore?: number,
+    totalQ?: number,
+    continent?: string,
+    mode?: string
+  ) => {
     let unlockedAny: Achievement | null = null;
+    let anyChanged = false;
+
     const updatedAchievements = achievements.map((ach) => {
-      if (ach.unlocked) return ach;
-
       let isNowUnlocked = false;
+      let newCount = ach.currentCount;
 
-      if (ach.id === 'first_step' && newStats.correctAnswers >= 1) {
-        isNowUnlocked = true;
-      } else if (ach.id === 'streak_5' && currentStreak >= 5) {
-        isNowUnlocked = true;
-      } else if (ach.id === 'streak_15' && currentStreak >= 15) {
-        isNowUnlocked = true;
-      } else if (ach.id === 'xp_500' && newStats.xp >= 500) {
-        isNowUnlocked = true;
-      } else if (ach.id === 'perfectionist' && quizScore && totalQ && quizScore === totalQ && totalQ >= 5) {
-        isNowUnlocked = true;
+      if (ach.id === 'first_step') {
+        newCount = Math.min(ach.targetCount, newStats.correctAnswers);
+        if (newStats.correctAnswers >= 1) isNowUnlocked = true;
+      } else if (ach.id === 'streak_5') {
+        newCount = Math.min(ach.targetCount, Math.max(currentStreak, newStats.bestStreak));
+        if (newCount >= 5) isNowUnlocked = true;
+      } else if (ach.id === 'streak_15') {
+        newCount = Math.min(ach.targetCount, Math.max(currentStreak, newStats.bestStreak));
+        if (newCount >= 15) isNowUnlocked = true;
+      } else if (ach.id === 'streak_25') {
+        newCount = Math.min(ach.targetCount, Math.max(currentStreak, newStats.bestStreak));
+        if (newCount >= 25) isNowUnlocked = true;
+      } else if (ach.id === 'marathon_100') {
+        newCount = Math.min(ach.targetCount, newStats.correctAnswers);
+        if (newStats.correctAnswers >= 100) isNowUnlocked = true;
+      } else if (ach.id === 'xp_500') {
+        newCount = Math.min(ach.targetCount, newStats.xp);
+        if (newStats.xp >= 500) isNowUnlocked = true;
+      } else if (ach.id === 'perfectionist') {
+        if (quizScore && totalQ && quizScore === totalQ && totalQ >= 5) {
+          newCount = 1;
+          isNowUnlocked = true;
+        }
+      } else if (ach.id === 'america_explorer') {
+        if (continent === 'América' && (quizScore ?? 0) >= 8) {
+          newCount = 8;
+          isNowUnlocked = true;
+        } else if (continent === 'América') {
+          newCount = Math.max(newCount, Math.min(8, quizScore ?? 0));
+        }
+      } else if (ach.id === 'europe_explorer') {
+        if (continent === 'Europa' && (quizScore ?? 0) >= 8) {
+          newCount = 8;
+          isNowUnlocked = true;
+        } else if (continent === 'Europa') {
+          newCount = Math.max(newCount, Math.min(8, quizScore ?? 0));
+        }
+      } else if (ach.id === 'africa_conqueror') {
+        if (continent === 'África' && (quizScore ?? 0) >= 8) {
+          newCount = 8;
+          isNowUnlocked = true;
+        } else if (continent === 'África') {
+          newCount = Math.max(newCount, Math.min(8, quizScore ?? 0));
+        }
+      } else if (ach.id === 'oceania_expert') {
+        if (continent === 'Oceanía' && (quizScore ?? 0) >= 6) {
+          newCount = 6;
+          isNowUnlocked = true;
+        } else if (continent === 'Oceanía') {
+          newCount = Math.max(newCount, Math.min(6, quizScore ?? 0));
+        }
+      } else if (ach.id === 'blitz_champion') {
+        if (mode === 'blitz' && (quizScore ?? 0) >= 12) {
+          newCount = 12;
+          isNowUnlocked = true;
+        } else if (mode === 'blitz') {
+          newCount = Math.max(newCount, Math.min(12, quizScore ?? 0));
+        }
+      } else if (ach.id === 'blitz_master_5s') {
+        if (mode === 'blitz' && continent === 'hard' && (quizScore ?? 0) >= 10) {
+          newCount = 10;
+          isNowUnlocked = true;
+        } else if (mode === 'blitz' && continent === 'hard') {
+          newCount = Math.max(newCount, Math.min(10, quizScore ?? 0));
+        }
+      } else if (ach.id === 'capitals_master') {
+        if (mode === 'capitals' && (quizScore ?? 0) >= 15) {
+          newCount = 15;
+          isNowUnlocked = true;
+        } else if (mode === 'capitals') {
+          newCount = Math.max(newCount, Math.min(15, quizScore ?? 0));
+        }
       }
 
-      if (isNowUnlocked) {
-        unlockedAny = { ...ach, unlocked: true, unlockedAt: new Date().toISOString() };
+      if (!ach.unlocked && isNowUnlocked) {
+        unlockedAny = {
+          ...ach,
+          unlocked: true,
+          unlockedAt: new Date().toISOString(),
+          currentCount: ach.targetCount,
+        };
         soundService.triggerCelebration();
+        anyChanged = true;
         return unlockedAny;
       }
+
+      if (newCount !== ach.currentCount) {
+        anyChanged = true;
+        return { ...ach, currentCount: newCount };
+      }
+
       return ach;
     });
 
     if (unlockedAny) {
       setNewAchievementUnlocked(unlockedAny);
-      setAchievements(updatedAchievements);
-      return updatedAchievements;
     }
 
-    return achievements;
+    if (anyChanged) {
+      setAchievements(updatedAchievements);
+    }
+
+    return updatedAchievements;
   };
 
   const recordAnswer = (isCorrect: boolean) => {
@@ -241,21 +330,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         capitalsProgress,
       };
 
-      let currentAch = achievements;
-      if (continent === 'América' && result.score >= 8) {
-        currentAch = currentAch.map(a => a.id === 'america_explorer' ? { ...a, unlocked: true } : a);
-      }
-      if (continent === 'Europa' && result.score >= 8) {
-        currentAch = currentAch.map(a => a.id === 'europe_explorer' ? { ...a, unlocked: true } : a);
-      }
-      if (mode === 'blitz' && result.score >= 12) {
-        currentAch = currentAch.map(a => a.id === 'blitz_champion' ? { ...a, unlocked: true } : a);
-      }
-      if (mode === 'capitals' && result.score >= 10) {
-        currentAch = currentAch.map(a => a.id === 'capitals_master' ? { ...a, unlocked: true } : a);
-      }
-
-      const updatedAchievements = checkAchievements(newStats, result.highestStreak, result.score, result.totalQuestions);
+      const updatedAchievements = checkAchievements(
+        newStats,
+        result.highestStreak,
+        result.score,
+        result.totalQuestions,
+        continent,
+        mode
+      );
       persistData(newStats, updatedAchievements);
       return newStats;
     });

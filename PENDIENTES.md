@@ -14,8 +14,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
 
 ### 🎮 Experiencia de Juego (Gameplay)
-- [ ] **Logros Adicionales (Achievements)**:
-  - Nuevas medallas desbloqueables (ej. *"Conquistador de África"*, *"Experto en Oceanía"*, *"Maestro del Blitz 5s"*, *"Racha de 25"*, *"Maratón de 100"*).
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto).
 
@@ -36,6 +34,14 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Logros Adicionales (Achievements & Medallas)**:
+  - 5 nuevas medallas desbloqueables integradas en el perfil: *"Conquistador de África 🌍"*, *"Experto en Oceanía 🏝️"*, *"Maestro Blitz 5s ⚡"*, *"Racha de 25 🔥"* y *"Maratón de 100 🏃‍♂️"*.
+  - Sistema unificado de evaluación y progreso dinámico en `checkAchievements` para los 14 logros.
+  - Sincronización y fusión automática con perfiles existentes en AsyncStorage.
+- [x] **Contabilización Precisa de Partidas (`gamesPlayed`) y Progreso en Salida Anticipada**:
+  - Registro de partida iniciada en cuanto el usuario responde su primera pregunta en cualquier modo.
+  - Auto-recuperación (self-healing) de estadísticas históricas si `gamesPlayed` quedó subcontabilizado.
+  - Guardado de estadísticas parciales y XP si el jugador sale a mitad de ronda con el botón atrás.
 - [x] **Modo Repaso de Fallos (Review & Retry)**:
   - Botón interactivo `🔁 Repasar Fallos (X)` en la pantalla de fin de partida de Banderas, Capitales y Blitz, así como dentro de `ReviewAnswersModal`.
   - Generación de rondas de práctica exclusivas con los países que el usuario falló para consolidar el aprendizaje al instante.
