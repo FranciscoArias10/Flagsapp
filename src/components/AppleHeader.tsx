@@ -44,7 +44,9 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
                 style={styles.logoImage}
               />
             )}
-            <Text style={styles.largeTitle}>{title}</Text>
+            <Text style={styles.largeTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {title}
+            </Text>
           </View>
         </View>
         {rightAccessory && <View style={styles.rightAccessory}>{rightAccessory}</View>}
@@ -78,6 +80,7 @@ const styles = StyleSheet.create({
   },
   titleColumn: {
     flex: 1,
+    minWidth: 0,
   },
   categoryText: {
     fontSize: 12,
@@ -103,6 +106,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   rightAccessory: {
-    marginLeft: 12,
+    marginLeft: 8,
+    flexShrink: 0,
   },
 });

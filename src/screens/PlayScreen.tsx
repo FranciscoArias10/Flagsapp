@@ -111,7 +111,7 @@ export const PlayScreen: React.FC = () => {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* User Mini Progress Strip */}
@@ -121,9 +121,9 @@ export const PlayScreen: React.FC = () => {
               <Text style={styles.userAvatarEmoji}>{stats.avatar || '🧭'}</Text>
             </View>
             <View style={styles.userStripMeta}>
-              <Text style={styles.userGreeting}>¡Hola, {stats.username || 'Explorador'}!</Text>
-              <Text style={styles.userStripLevel}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
-              <Text style={styles.userStripSub}>
+              <Text style={styles.userGreeting} numberOfLines={1}>¡Hola, {stats.username || 'Explorador'}!</Text>
+              <Text style={styles.userStripLevel} numberOfLines={1}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
+              <Text style={styles.userStripSub} numberOfLines={1}>
                 {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para subir de nivel` : '¡Nivel Legendario!'}
               </Text>
             </View>
@@ -185,10 +185,15 @@ export const PlayScreen: React.FC = () => {
               </View>
             </View>
             <View style={styles.globalFooter}>
-              <Text style={styles.globalQuestionCount}>
-                126 Países • Personaliza tiempo y preguntas
-              </Text>
-              <Ionicons name="play-circle" size={32} color="#FFFFFF" />
+              <View style={styles.globalFooterLeft}>
+                <Text style={styles.globalQuestionCount} numberOfLines={1}>
+                  126 Países • Personalizable
+                </Text>
+              </View>
+              <View style={styles.globalPlayBtn}>
+                <Text style={styles.globalPlayBtnText}>Jugar</Text>
+                <Ionicons name="play" size={13} color="#007AFF" />
+              </View>
             </View>
           </LinearGradient>
         </Pressable>
@@ -223,10 +228,13 @@ export const PlayScreen: React.FC = () => {
                 <Text style={styles.continentCount}>{item.count} Países</Text>
 
                 <View style={styles.continentFooter}>
-                  <Text style={[styles.continentPlayTxt, { color: item.color }]}>
-                    Jugar
-                  </Text>
-                  <Ionicons name="chevron-forward" size={14} color={item.color} />
+                  <View style={[styles.continentPlayBadge, { backgroundColor: `${item.color}15` }]}>
+                    <Text style={[styles.continentPlayTxt, { color: item.color }]}>
+                      Jugar
+                    </Text>
+                    <Ionicons name="play" size={11} color={item.color} />
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={IOSColors.tertiaryLabel} />
                 </View>
               </Pressable>
             );
@@ -344,6 +352,8 @@ const styles = StyleSheet.create({
   },
   userStripMeta: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   userGreeting: {
     fontSize: 16,
@@ -468,14 +478,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    borderTopColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  globalFooterLeft: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
   },
   globalQuestionCount: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
+  },
+  globalPlayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    ...IOSColors.cardShadow,
+  },
+  globalPlayBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#007AFF',
+    marginRight: 4,
   },
   continentsGrid: {
     flexDirection: 'row',
@@ -487,7 +517,8 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
+    marginBottom: 12,
     ...IOSColors.cardShadow,
   },
   cardPressed: {
@@ -498,11 +529,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   continentIconWrap: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -512,7 +543,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continentName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: IOSColors.label,
     marginBottom: 2,
@@ -520,16 +551,23 @@ const styles = StyleSheet.create({
   continentCount: {
     fontSize: 12,
     color: IOSColors.secondaryLabel,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   continentFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  continentPlayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 10,
   },
   continentPlayTxt: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginRight: 2,
+    fontSize: 12,
+    fontWeight: '800',
+    marginRight: 3,
   },
 });
