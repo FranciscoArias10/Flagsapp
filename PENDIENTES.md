@@ -34,6 +34,11 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Auditoría y Optimización Responsive Integral en Todos los Dispositivos**:
+  - Reestructuración de la tarjeta "Modo Global" con botón de acción destacado `[Jugar ▶]` inmune a recortes por ancho de pantalla.
+  - Insignias interactivas "Jugar" en las tarjetas de continentes y prevención de desbordamiento horizontal en pantallas estrechas.
+  - Ajuste de márgenes inferiores en todos los ScrollViews y FlatLists (130px + insets.bottom) para despejar por completo la barra de navegación flotante y botones de Android.
+  - Textos adaptables con auto-scaling (`adjustsFontSizeToFit`, `minWidth: 0`, `flexShrink: 1`) en cabeceras AppleHeader, preguntas, modales y opciones.
 - [x] **Logros Adicionales (Achievements & Medallas)**:
   - 5 nuevas medallas desbloqueables integradas en el perfil: *"Conquistador de África 🌍"*, *"Experto en Oceanía 🏝️"*, *"Maestro Blitz 5s ⚡"*, *"Racha de 25 🔥"* y *"Maratón de 100 🏃‍♂️"*.
   - Sistema unificado de evaluación y progreso dinámico en `checkAchievements` para los 14 logros.
