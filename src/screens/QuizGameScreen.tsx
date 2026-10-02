@@ -39,7 +39,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult, stats } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const hasCountedGameRef = useRef(false);
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
   const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(initialTimeLimit);
@@ -154,6 +155,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     const targetCount = countParam === 'all' ? 999 : countParam;
     const generated = generateQuizQuestions(targetCount, continent, 'flag_to_name');
     setIsRetryRound(false);
+    hasCountedGameRef.current = false;
     setQuestions(generated);
     setCurrentIndex(0);
     setSelectedOptionIndex(null);
@@ -193,6 +195,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     const retryQs = generateQuizQuestionsFromCountries(failedCountries, 'flag_to_name', continent);
 
     setIsRetryRound(true);
+    hasCountedGameRef.current = false;
     setQuestions(retryQs);
     setCurrentIndex(0);
     setSelectedOptionIndex(null);
@@ -263,6 +266,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       },
     ]);
 
+    if (!hasCountedGameRef.current) {
+      recordGameStart();
+      hasCountedGameRef.current = true;
+    }
     recordAnswer(false);
     soundService.triggerError();
     triggerShake();
@@ -338,6 +345,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       },
     ]);
 
+    if (!hasCountedGameRef.current) {
+      recordGameStart();
+      hasCountedGameRef.current = true;
+    }
     recordAnswer(isCorrect);
 
     if (isCorrect) {
@@ -417,7 +428,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       stars,
     };
 
-    recordQuizResult(result, continent === 'Mundo' ? undefined : continent, 'flags');
+    recordQuizResult(result, continent === 'Mundo' ? undefined : continent, 'flags', hasCountedGameRef.current);
+    hasCountedGameRef.current = true;
     setShowSummary(true);
 
     if (stars >= 2) {
@@ -595,12 +607,33 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     );
   }
 
+  const handleCloseQuiz = () => {
+    soundService.triggerLightTap();
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+
+    if (!showSummary && hasCountedGameRef.current && reviewItems.length > 0) {
+      const answeredTotal = reviewItems.length;
+      const partialXp = calculateXpEarned(score, answeredTotal, highestStreak);
+      const partialResult: QuizResult = {
+        score,
+        totalQuestions: answeredTotal,
+        xpEarned: partialXp,
+        accuracy: Math.round((score / answeredTotal) * 100),
+        highestStreak,
+        stars: calculateStars(score, answeredTotal),
+      };
+      recordQuizResult(partialResult, continent === 'Mundo' ? undefined : continent, 'flags', true);
+    }
+    onClose();
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerControlRow}>
-          <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+          <Pressable onPress={handleCloseQuiz} style={styles.closeBtn} hitSlop={12}>
             <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
           </Pressable>
 

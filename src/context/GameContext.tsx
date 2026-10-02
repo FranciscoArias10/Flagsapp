@@ -69,7 +69,8 @@ interface GameContextType {
   achievements: Achievement[];
   isLoading: boolean;
   recordAnswer: (isCorrect: boolean) => void;
-  recordQuizResult: (result: QuizResult, continent?: string, mode?: string) => void;
+  recordGameStart: () => void;
+  recordQuizResult: (result: QuizResult, continent?: string, mode?: string, alreadyCountedGame?: boolean) => void;
   updateProfile: (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => Promise<void>;
   toggleSound: () => void;
   toggleHaptics: () => void;
@@ -102,6 +103,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsed = JSON.parse(savedStats);
         if (parsed.fastAnswerOpportunityEnabled === undefined) {
           parsed.fastAnswerOpportunityEnabled = true;
+        }
+        // Self-heal gamesPlayed if it was 0 or undercounted compared to total answers
+        if (parsed.totalAnswers > 0) {
+          const estimatedMinGames = Math.ceil(parsed.totalAnswers / 12);
+          if (!parsed.gamesPlayed || parsed.gamesPlayed < estimatedMinGames) {
+            parsed.gamesPlayed = Math.max(parsed.gamesPlayed || 0, estimatedMinGames);
+          }
         }
         setStats(parsed);
         soundService.setPreferences(parsed.soundEnabled, parsed.hapticsEnabled);
@@ -182,11 +190,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const recordQuizResult = (result: QuizResult, continent?: string, mode?: string) => {
+  const recordGameStart = () => {
+    setStats((prev) => {
+      const newGames = prev.gamesPlayed + 1;
+      const updated = {
+        ...prev,
+        gamesPlayed: newGames,
+      };
+      persistData(updated, achievements);
+      return updated;
+    });
+  };
+
+  const recordQuizResult = (result: QuizResult, continent?: string, mode?: string, alreadyCountedGame?: boolean) => {
     setStats((prev) => {
       const newXp = prev.xp + result.xpEarned;
       const levelInfo = getLevelInfo(newXp);
-      const newGames = prev.gamesPlayed + 1;
+      const newGames = alreadyCountedGame ? prev.gamesPlayed : prev.gamesPlayed + 1;
       const newBestStreak = Math.max(prev.bestStreak, result.highestStreak);
 
       const continentProgress = { ...prev.continentProgress };
@@ -346,6 +366,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         achievements,
         isLoading,
         recordAnswer,
+        recordGameStart,
         recordQuizResult,
         updateProfile,
         toggleSound,

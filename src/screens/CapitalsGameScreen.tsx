@@ -129,7 +129,8 @@ const askedCapitalsHistory: Map<string, Set<string>> = new Map();
 export const CapitalsGameScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult, stats } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const hasCountedGameRef = useRef(false);
 
   const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<CapitalDifficulty>('easy');
@@ -309,6 +310,7 @@ export const CapitalsGameScreen: React.FC = () => {
     setTimeLeft(timeLimit);
     const qs = generateCapitalQuestions(count, difficulty);
     setIsRetryRound(false);
+    hasCountedGameRef.current = false;
     setQuestions(qs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -372,6 +374,7 @@ export const CapitalsGameScreen: React.FC = () => {
     });
 
     setIsRetryRound(true);
+    hasCountedGameRef.current = false;
     setQuestions(retryQs);
     setCurrentIndex(0);
     setSelectedCapital(null);
@@ -437,6 +440,10 @@ export const CapitalsGameScreen: React.FC = () => {
       },
     ]);
 
+    if (!hasCountedGameRef.current) {
+      recordGameStart();
+      hasCountedGameRef.current = true;
+    }
     recordAnswer(false);
     soundService.triggerError();
     triggerShake();
@@ -508,6 +515,10 @@ export const CapitalsGameScreen: React.FC = () => {
       },
     ]);
 
+    if (!hasCountedGameRef.current) {
+      recordGameStart();
+      hasCountedGameRef.current = true;
+    }
     recordAnswer(isCorrect);
 
     if (isCorrect) {
@@ -587,7 +598,8 @@ export const CapitalsGameScreen: React.FC = () => {
       stars,
     };
 
-    recordQuizResult(result, selectedDifficulty, 'capitals');
+    recordQuizResult(result, selectedDifficulty, 'capitals', hasCountedGameRef.current);
+    hasCountedGameRef.current = true;
     setShowSummary(true);
 
     if (stars >= 2) {
@@ -609,6 +621,28 @@ export const CapitalsGameScreen: React.FC = () => {
         ))}
       </View>
     );
+  };
+
+  const handleBackToDifficulty = () => {
+    soundService.triggerLightTap();
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+
+    if (!showSummary && hasCountedGameRef.current && reviewItems.length > 0) {
+      const answeredTotal = reviewItems.length;
+      const partialXp = calculateXpEarned(score, answeredTotal, highestStreak);
+      const partialResult: QuizResult = {
+        score,
+        totalQuestions: answeredTotal,
+        xpEarned: partialXp,
+        accuracy: Math.round((score / answeredTotal) * 100),
+        highestStreak,
+        stars: calculateStars(score, answeredTotal),
+      };
+      recordQuizResult(partialResult, selectedDifficulty, 'capitals', true);
+    }
+    setShowSummary(false);
+    setScreenMode('difficulty_select');
   };
 
   // 1. DIFFICULTY SELECTION SCREEN
@@ -873,11 +907,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
             <AppleButton
               title="Cambiar Dificultad"
-              onPress={() => {
-                soundService.triggerLightTap();
-                setShowSummary(false);
-                setScreenMode('difficulty_select');
-              }}
+              onPress={handleBackToDifficulty}
               variant="secondary"
               style={{ width: '100%' }}
             />
@@ -901,10 +931,7 @@ export const CapitalsGameScreen: React.FC = () => {
       <View style={styles.topHeader}>
         <View style={styles.headerControlRow}>
           <Pressable
-            onPress={() => {
-              soundService.triggerLightTap();
-              setScreenMode('difficulty_select');
-            }}
+            onPress={handleBackToDifficulty}
             style={styles.backBtn}
             hitSlop={12}
           >

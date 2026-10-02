@@ -104,7 +104,8 @@ type ScreenMode = 'difficulty_select' | 'playing' | 'game_over';
 export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordQuizResult, stats } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const hasCountedGameRef = useRef(false);
 
   const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BlitzDifficulty>('medium');
@@ -214,6 +215,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       setSelectedQuestionCount(countParam);
     }
     setIsRetryRound(false);
+    hasCountedGameRef.current = false;
     setRetryCountryCodes([]);
     setEliminatedOptionIdx(null);
     setHasSecondChance(false);
@@ -237,6 +239,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
     soundService.triggerSelection();
     setIsRetryRound(true);
+    hasCountedGameRef.current = false;
     const failedCodes = failedItems.map((f) => f.countryCode).filter(Boolean) as string[];
     setRetryCountryCodes(failedCodes);
     setTimeLeft(BLITZ_DIFFICULTIES[selectedDifficulty].seconds);
@@ -308,6 +311,10 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       },
     ]);
 
+    if (!hasCountedGameRef.current) {
+      recordGameStart();
+      hasCountedGameRef.current = true;
+    }
     recordAnswer(isCorrect);
 
     if (isCorrect) {
@@ -363,7 +370,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       stars: finalScore >= 12 ? 3 : finalScore >= 7 ? 2 : 1,
     };
 
-    recordQuizResult(result, undefined, 'blitz');
+    recordQuizResult(result, selectedDifficulty, 'blitz', hasCountedGameRef.current);
+    hasCountedGameRef.current = true;
 
     const confettiThreshold = selectedDifficulty === 'hard' ? 5 : 10;
     if (finalScore >= confettiThreshold) {
@@ -629,11 +637,30 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const urgentThreshold = selectedDifficulty === 'hard' ? 2 : 4;
   const isLowTime = timeLeft <= urgentThreshold;
 
+  const handleClosePlaying = () => {
+    soundService.triggerLightTap();
+    if (screenMode === 'playing' && hasCountedGameRef.current && reviewItems.length > 0) {
+      const finalScore = score;
+      const total = Math.max(1, reviewItems.length);
+      const xpEarned = calculateXpEarned(finalScore, total, highestStreak, finalScore * 10);
+      const result: QuizResult = {
+        score: finalScore,
+        totalQuestions: total,
+        xpEarned,
+        accuracy: Math.round((finalScore / total) * 100),
+        highestStreak,
+        stars: finalScore >= 12 ? 3 : finalScore >= 7 ? 2 : 1,
+      };
+      recordQuizResult(result, selectedDifficulty, 'blitz', true);
+    }
+    onClose();
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
       {/* Top Blitz Header */}
       <View style={styles.blitzTopHeader}>
-        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
+        <Pressable onPress={handleClosePlaying} style={styles.closeBtn} hitSlop={12}>
           <Ionicons name="close-circle" size={30} color={IOSColors.tertiaryLabel} />
         </Pressable>
 
