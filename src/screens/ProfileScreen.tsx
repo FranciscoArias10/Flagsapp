@@ -176,8 +176,37 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
-      <AppleHeader title="Perfil" category="JUGADOR" />
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
+      <AppleHeader
+        title="Perfil"
+        category="JUGADOR"
+        rightAccessory={
+          <Pressable
+            onPress={() => {
+              soundService.triggerSelection();
+              setThemePreference(isDark ? 'light' : 'dark');
+            }}
+            style={({ pressed }) => [
+              styles.themeToggleBtn,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.06)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.1)',
+              },
+              pressed && { opacity: 0.75, transform: [{ scale: 0.95 }] },
+            ]}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={isDark ? "sunny" : "moon"}
+              size={18}
+              color={isDark ? "#FFD60A" : "#5856D6"}
+            />
+            <Text style={[styles.themeToggleBtnText, { color: colors.label }]}>
+              {isDark ? "Claro" : "Oscuro"}
+            </Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
@@ -190,33 +219,33 @@ export const ProfileScreen: React.FC = () => {
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarEmoji}>{stats.avatar || '🧭'}</Text>
               </View>
-              <View style={styles.editPillBadge}>
+              <View style={[styles.editPillBadge, { borderColor: colors.cardBackground }]}>
                 <Ionicons name="pencil" size={11} color="#FFFFFF" />
               </View>
             </Pressable>
 
             <View style={styles.playerMeta}>
               <View style={styles.nameRow}>
-                <Text style={styles.playerName} numberOfLines={1}>
+                <Text style={[styles.playerName, { color: colors.label }]} numberOfLines={1}>
                   {stats.username || 'Explorador'}
                 </Text>
                 <Pressable onPress={handleOpenEdit} hitSlop={10} style={styles.editNameBtn}>
-                  <Ionicons name="create-outline" size={18} color={IOSColors.systemBlue} />
+                  <Ionicons name="create-outline" size={18} color={colors.systemBlue} />
                 </Pressable>
               </View>
 
-              <Text style={styles.playerTitle}>{levelInfo.title}</Text>
+              <Text style={[styles.playerTitle, { color: colors.secondaryLabel }]}>{levelInfo.title}</Text>
 
               <View style={styles.badgesRow}>
                 <View style={styles.levelBadge}>
-                  <Ionicons name="sparkles" size={12} color={IOSColors.systemPurple} />
-                  <Text style={styles.levelBadgeText}>Nivel {levelInfo.level}</Text>
+                  <Ionicons name="sparkles" size={12} color={colors.systemPurple} />
+                  <Text style={[styles.levelBadgeText, { color: colors.systemPurple }]}>Nivel {levelInfo.level}</Text>
                 </View>
 
                 {currentFavCountry && (
-                  <View style={styles.favCountryPill}>
+                  <View style={[styles.favCountryPill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
                     <Text style={styles.favCountryEmoji}>{currentFavCountry.flagEmoji}</Text>
-                    <Text style={styles.favCountryName} numberOfLines={1}>
+                    <Text style={[styles.favCountryName, { color: colors.label }]} numberOfLines={1}>
                       {currentFavCountry.name}
                     </Text>
                   </View>
@@ -228,8 +257,8 @@ export const ProfileScreen: React.FC = () => {
           {/* XP Progress */}
           <View style={styles.xpSection}>
             <View style={styles.xpLabelRow}>
-              <Text style={styles.xpText}>{stats.xp} XP acumulados</Text>
-              <Text style={styles.xpNextText}>
+              <Text style={[styles.xpText, { color: colors.label }]}>{stats.xp} XP acumulados</Text>
+              <Text style={[styles.xpNextText, { color: colors.secondaryLabel }]}>
                 {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para el sig. nivel` : '¡Nivel Máximo!'}
               </Text>
             </View>
@@ -241,9 +270,9 @@ export const ProfileScreen: React.FC = () => {
           </View>
 
           {/* Edit Profile Quick Button */}
-          <Pressable onPress={handleOpenEdit} style={styles.editProfileBtn}>
-            <Ionicons name="person-circle-outline" size={16} color={IOSColors.systemBlue} />
-            <Text style={styles.editProfileBtnText}>Personalizar Avatar y Nombre</Text>
+          <Pressable onPress={handleOpenEdit} style={[styles.editProfileBtn, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.18)' : 'rgba(0, 122, 255, 0.08)' }]}>
+            <Ionicons name="person-circle-outline" size={16} color={colors.systemBlue} />
+            <Text style={[styles.editProfileBtnText, { color: colors.systemBlue }]}>Personalizar Avatar y Nombre</Text>
           </Pressable>
         </AppleCard>
 
@@ -276,20 +305,20 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Cloud & Local Backup */}
-        <Text style={styles.sectionHeader}>CUENTA Y RESPALDO</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>CUENTA Y RESPALDO</Text>
         <AppleCard style={styles.cloudCard} shadowLevel="small">
           <View style={styles.cloudRow}>
-            <View style={styles.cloudIconCircle}>
-              <Ionicons name="cloud-done" size={24} color={IOSColors.systemBlue} />
+            <View style={[styles.cloudIconCircle, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
+              <Ionicons name="cloud-done" size={24} color={colors.systemBlue} />
             </View>
             <View style={styles.cloudMeta}>
               <View style={styles.cloudTitleRow}>
-                <Text style={styles.cloudTitle}>Respaldo y Restauración</Text>
+                <Text style={[styles.cloudTitle, { color: colors.label }]}>Respaldo y Restauración</Text>
                 <View style={styles.activeBackupPill}>
                   <Text style={styles.activeBackupPillText}>DISPONIBLE</Text>
                 </View>
               </View>
-              <Text style={styles.cloudDesc}>
+              <Text style={[styles.cloudDesc, { color: colors.secondaryLabel }]}>
                 Guarda una copia de tu nivel, XP, avatar y logros en Google Drive, WhatsApp o Notas, o restaura tu progreso en cualquier dispositivo.
               </Text>
             </View>
@@ -315,35 +344,36 @@ export const ProfileScreen: React.FC = () => {
               onPress={handleOpenRestoreModal}
               style={({ pressed }) => [
                 styles.backupBtnSecondary,
+                { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.18)' : 'rgba(0, 122, 255, 0.1)' },
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <Ionicons name="cloud-download-outline" size={16} color={IOSColors.systemBlue} style={{ marginRight: 6 }} />
-              <Text style={styles.backupBtnSecondaryText}>Restaurar</Text>
+              <Ionicons name="cloud-download-outline" size={16} color={colors.systemBlue} style={{ marginRight: 6 }} />
+              <Text style={[styles.backupBtnSecondaryText, { color: colors.systemBlue }]}>Restaurar</Text>
             </Pressable>
           </View>
 
-          <View style={styles.storageStatusRow}>
-            <Ionicons name="shield-checkmark" size={14} color={IOSColors.systemGreen} />
-            <Text style={styles.storageStatusText}>Almacenamiento seguro • Respaldable sin costo</Text>
+          <View style={[styles.storageStatusRow, { borderTopColor: colors.separator }]}>
+            <Ionicons name="shield-checkmark" size={14} color={colors.systemGreen} />
+            <Text style={[styles.storageStatusText, { color: colors.systemGreen }]}>Almacenamiento seguro • Respaldable sin costo</Text>
           </View>
         </AppleCard>
 
         {/* Achievements Section */}
-        <Text style={styles.sectionHeader}>LOGROS Y MEDALLAS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>LOGROS Y MEDALLAS</Text>
         <View style={styles.achievementsList}>
           {achievements.map((ach) => (
             <AppleCard key={ach.id} style={styles.achievementCard}>
               <View
                 style={[
                   styles.achievementIconCircle,
-                  { backgroundColor: ach.unlocked ? `${ach.color}25` : 'rgba(120, 120, 128, 0.1)' },
+                  { backgroundColor: ach.unlocked ? `${ach.color}25` : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(120, 120, 128, 0.1)' },
                 ]}
               >
                 <Ionicons
                   name={ach.icon as any}
                   size={24}
-                  color={ach.unlocked ? ach.color : IOSColors.quaternaryLabel}
+                  color={ach.unlocked ? ach.color : colors.tertiaryLabel}
                 />
               </View>
 
@@ -352,7 +382,7 @@ export const ProfileScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.achievementTitle,
-                      !ach.unlocked && { color: IOSColors.secondaryLabel },
+                      { color: ach.unlocked ? colors.label : colors.secondaryLabel },
                     ]}
                   >
                     {ach.title}
@@ -363,7 +393,7 @@ export const ProfileScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
-                <Text style={styles.achievementDesc}>{ach.description}</Text>
+                <Text style={[styles.achievementDesc, { color: colors.secondaryLabel }]}>{ach.description}</Text>
               </View>
             </AppleCard>
           ))}
@@ -730,6 +760,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: IOSColors.systemBackground,
+  },
+  themeToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  themeToggleBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   scrollContent: {
     paddingHorizontal: 20,
