@@ -136,7 +136,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       }
       handleTimeout();
     } else if (timeLeft <= 4 && timeLeft > 0) {
-      soundService.triggerLightTap();
+      soundService.triggerCountdownTick();
     }
   }, [timeLeft, isAnswered, questions.length, showSummary]);
 
@@ -304,7 +304,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
       setHasSecondChance(false);
       setEliminatedOptions((prev) => [...prev, index]);
-      soundService.triggerSelection();
+      soundService.triggerShield();
       triggerShake();
       setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta pregunta');
       // Give buffer so they can read and try again without instant timeout
@@ -326,6 +326,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     // Fast Answer Second Chance Shield Reward (on lightning-fast correct answer)
     if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 2.5) {
       setHasSecondChance(true);
+      soundService.triggerShield();
       setShieldMessage('⚡ ¡Respuesta Relámpago! Ganaste 1 Segunda Oportunidad 🛡️');
       setTimeout(() => setShieldMessage(null), 3000);
     }
@@ -352,11 +353,15 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     recordAnswer(isCorrect);
 
     if (isCorrect) {
-      soundService.triggerSuccess();
       const nextStreak = currentStreak + 1;
       setCurrentStreak(nextStreak);
       setHighestStreak((prev) => Math.max(prev, nextStreak));
       setScore((prev) => prev + 1);
+      if (nextStreak > 0 && nextStreak % 5 === 0) {
+        soundService.triggerStreak();
+      } else {
+        soundService.triggerSuccess();
+      }
     } else {
       soundService.triggerError();
       triggerShake();

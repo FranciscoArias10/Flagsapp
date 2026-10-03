@@ -216,7 +216,7 @@ export const CapitalsGameScreen: React.FC = () => {
       }
       handleTimeout();
     } else if (timeLeft <= 4 && timeLeft > 0) {
-      soundService.triggerLightTap();
+      soundService.triggerCountdownTick();
     }
   }, [timeLeft, isAnswered, screenMode, questions.length, showSummary]);
 
@@ -478,7 +478,7 @@ export const CapitalsGameScreen: React.FC = () => {
     if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
       setHasSecondChance(false);
       setEliminatedCapitals((prev) => [...prev, cap]);
-      soundService.triggerSelection();
+      soundService.triggerShield();
       triggerShake();
       setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta capital');
       setTimeLeft((prev) => Math.max(prev, 5));
@@ -496,6 +496,7 @@ export const CapitalsGameScreen: React.FC = () => {
     // Fast Answer Second Chance Shield Reward
     if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 2.5) {
       setHasSecondChance(true);
+      soundService.triggerShield();
       setShieldMessage('⚡ ¡Respuesta Relámpago! Ganaste 1 Segunda Oportunidad 🛡️');
       setTimeout(() => setShieldMessage(null), 3000);
     }
@@ -522,11 +523,15 @@ export const CapitalsGameScreen: React.FC = () => {
     recordAnswer(isCorrect);
 
     if (isCorrect) {
-      soundService.triggerSuccess();
       const nextStreak = streak + 1;
       setStreak(nextStreak);
       setHighestStreak((prev) => Math.max(prev, nextStreak));
       setScore((prev) => prev + 1);
+      if (nextStreak > 0 && nextStreak % 5 === 0) {
+        soundService.triggerStreak();
+      } else {
+        soundService.triggerSuccess();
+      }
     } else {
       soundService.triggerError();
       triggerShake();

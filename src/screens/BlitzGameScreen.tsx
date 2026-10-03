@@ -165,7 +165,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           Animated.timing(timerScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
           Animated.timing(timerScale, { toValue: 1, duration: 100, useNativeDriver: true }),
         ]).start();
-        soundService.triggerLightTap();
+        soundService.triggerCountdownTick();
       }
     }
   }, [screenMode, timeLeft, selectedDifficulty]);
@@ -278,7 +278,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     if (!isCorrect && fastOpportunityEnabled && hasSecondChance) {
       setHasSecondChance(false);
       setEliminatedOptionIdx(idx);
-      soundService.triggerSelection();
+      soundService.triggerShield();
       showBonusPopup('🛡️ ¡Escudo Salvavidas! 0s penalización');
       return;
     }
@@ -289,6 +289,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     // Fast Answer Second Chance Shield Reward (ultra fast in blitz: <= 1.8s)
     if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 1.8) {
       setHasSecondChance(true);
+      soundService.triggerShield();
       showBonusPopup('⚡ ¡Relámpago! +1 Escudo 🛡️');
     }
 
@@ -318,13 +319,17 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
     recordAnswer(isCorrect);
 
     if (isCorrect) {
-      soundService.triggerSuccess();
       const nextStreak = streak + 1;
       setStreak(nextStreak);
       setHighestStreak((prev) => Math.max(prev, nextStreak));
       setScore((prev) => prev + 1);
       setTimeLeft((prev) => prev + diffConfig.bonus);
       showBonusPopup(`+${diffConfig.bonus}s`);
+      if (nextStreak > 0 && nextStreak % 5 === 0) {
+        soundService.triggerStreak();
+      } else {
+        soundService.triggerSuccess();
+      }
     } else {
       soundService.triggerError();
       setStreak(0);
