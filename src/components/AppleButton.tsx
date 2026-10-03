@@ -13,6 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface AppleButtonProps {
   title: string;
   onPress: () => void;
@@ -36,6 +38,7 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
   size = 'large',
   hapticStyle = 'light',
 }) => {
+  const { isDark, colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -97,11 +100,11 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
         style={[
           styles.text,
           getTextSizeStyle(),
-          variant === 'outline' && styles.textOutline,
-          variant === 'secondary' && styles.textSecondary,
+          variant === 'outline' && { color: colors.systemBlue },
+          variant === 'secondary' && { color: colors.systemBlue },
           (variant === 'primary' || variant === 'gradient' || variant === 'success' || variant === 'danger') &&
             styles.textWhite,
-          disabled && styles.textDisabled,
+          disabled && { color: colors.quaternaryLabel },
           textStyle,
         ]}
       >
@@ -120,11 +123,13 @@ export const AppleButton: React.FC<AppleButtonProps> = ({
         style={({ pressed }) => [
           styles.buttonBase,
           getSizeStyle(),
-          variant === 'primary' && styles.buttonPrimary,
-          variant === 'secondary' && styles.buttonSecondary,
-          variant === 'outline' && styles.buttonOutline,
-          variant === 'success' && styles.buttonSuccess,
-          variant === 'danger' && styles.buttonDanger,
+          variant === 'primary' && [{ backgroundColor: colors.systemBlue }, colors.buttonShadow],
+          variant === 'secondary' && {
+            backgroundColor: isDark ? 'rgba(120, 120, 128, 0.28)' : 'rgba(120, 120, 128, 0.12)',
+          },
+          variant === 'outline' && [styles.buttonOutline, { borderColor: colors.systemBlue }],
+          variant === 'success' && [{ backgroundColor: colors.systemGreen }, { shadowColor: colors.systemGreen }],
+          variant === 'danger' && [{ backgroundColor: colors.systemRed }, { shadowColor: colors.systemRed }],
           disabled && styles.buttonDisabled,
         ]}
       >

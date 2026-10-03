@@ -20,10 +20,12 @@ import { soundService } from '../utils/soundHelper';
 import { FlagImage } from '../components/FlagImage';
 import { AppleHeader } from '../components/AppleHeader';
 import { AppleButton } from '../components/AppleButton';
+import { useTheme } from '../context/ThemeContext';
 
 export const AtlasScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
+  const { isDark, colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -56,6 +58,12 @@ export const AtlasScreen: React.FC = () => {
       onPress={() => handleSelectCountry(item)}
       style={({ pressed }) => [
         styles.countryCard,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.cardBorder,
+          borderWidth: 1,
+        },
+        colors.cardShadow,
         pressed && styles.countryCardPressed,
       ]}
     >
@@ -70,20 +78,20 @@ export const AtlasScreen: React.FC = () => {
       </View>
 
       <View style={styles.countryInfo}>
-        <Text style={styles.countryName}>{item.name}</Text>
+        <Text style={[styles.countryName, { color: colors.label }]}>{item.name}</Text>
         <View style={styles.detailRow}>
-          <Ionicons name="business-outline" size={13} color={IOSColors.secondaryLabel} />
-          <Text style={styles.capitalText}>{item.capital}</Text>
+          <Ionicons name="business-outline" size={13} color={colors.secondaryLabel} />
+          <Text style={[styles.capitalText, { color: colors.secondaryLabel }]}>{item.capital}</Text>
         </View>
-        <Text style={styles.continentText}>{item.continent}</Text>
+        <Text style={[styles.continentText, { color: colors.systemBlue }]}>{item.continent}</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color={IOSColors.tertiaryLabel} />
+      <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} />
     </Pressable>
   );
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       <AppleHeader
         title="Atlas"
         category="BIBLIOTECA"
@@ -96,20 +104,20 @@ export const AtlasScreen: React.FC = () => {
 
       {/* iOS Search Bar */}
       <View style={styles.searchBarContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={IOSColors.tertiaryLabel} style={styles.searchIcon} />
+        <View style={[styles.searchBar, { backgroundColor: colors.surface }]}>
+          <Ionicons name="search" size={18} color={colors.tertiaryLabel} style={styles.searchIcon} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Buscar país o capital..."
-            placeholderTextColor={IOSColors.tertiaryLabel}
-            style={styles.searchInput}
+            placeholderTextColor={colors.tertiaryLabel}
+            style={[styles.searchInput, { color: colors.label }]}
             clearButtonMode="while-editing"
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color={IOSColors.tertiaryLabel} />
+              <Ionicons name="close-circle" size={16} color={colors.tertiaryLabel} />
             </Pressable>
           )}
         </View>
@@ -128,9 +136,19 @@ export const AtlasScreen: React.FC = () => {
               <Pressable
                 key={filter}
                 onPress={() => handleSelectFilter(filter)}
-                style={[styles.chip, isActive && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  { backgroundColor: isActive ? colors.systemBlue : colors.surface },
+                  isActive && styles.chipActive,
+                ]}
               >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isActive ? '#FFFFFF' : colors.secondaryLabel },
+                    isActive && styles.chipTextActive,
+                  ]}
+                >
                   {filter}
                 </Text>
               </Pressable>
@@ -149,9 +167,9 @@ export const AtlasScreen: React.FC = () => {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="earth" size={48} color={IOSColors.tertiaryLabel} />
-            <Text style={styles.emptyTitle}>No se encontraron países</Text>
-            <Text style={styles.emptySubtitle}>Prueba con otro término de búsqueda</Text>
+            <Ionicons name="earth" size={48} color={colors.tertiaryLabel} />
+            <Text style={[styles.emptyTitle, { color: colors.label }]}>No se encontraron países</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.secondaryLabel }]}>Prueba con otro término de búsqueda</Text>
           </View>
         }
       />
@@ -164,15 +182,15 @@ export const AtlasScreen: React.FC = () => {
         onRequestClose={() => setSelectedCountry(null)}
       >
         {selectedCountry && (
-          <View style={[styles.modalSafeArea, { paddingTop: Platform.OS === 'android' ? topInset : 10 }]}>
+          <View style={[styles.modalSafeArea, { backgroundColor: colors.systemBackground, paddingTop: Platform.OS === 'android' ? topInset : 10 }]}>
             <View style={styles.modalHeader}>
-              <View style={styles.modalGrabber} />
+              <View style={[styles.modalGrabber, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(60, 60, 67, 0.3)' }]} />
               <Pressable
                 onPress={() => setSelectedCountry(null)}
                 style={styles.modalCloseBtn}
                 hitSlop={12}
               >
-                <Ionicons name="close-circle" size={28} color={IOSColors.tertiaryLabel} />
+                <Ionicons name="close-circle" size={28} color={colors.tertiaryLabel} />
               </Pressable>
             </View>
 
@@ -187,35 +205,35 @@ export const AtlasScreen: React.FC = () => {
                 />
               </View>
 
-              <Text style={styles.modalCountryName}>{selectedCountry.name}</Text>
-              <Text style={styles.modalContinent}>{selectedCountry.continent.toUpperCase()}</Text>
+              <Text style={[styles.modalCountryName, { color: colors.label }]}>{selectedCountry.name}</Text>
+              <Text style={[styles.modalContinent, { color: colors.systemBlue }]}>{selectedCountry.continent.toUpperCase()}</Text>
 
               <View style={styles.infoCardsRow}>
-                <View style={styles.infoBox}>
-                  <Ionicons name="business" size={20} color={IOSColors.systemPurple} />
-                  <Text style={styles.infoBoxVal}>{selectedCountry.capital}</Text>
-                  <Text style={styles.infoBoxLbl}>Capital</Text>
+                <View style={[styles.infoBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+                  <Ionicons name="business" size={20} color={colors.systemPurple} />
+                  <Text style={[styles.infoBoxVal, { color: colors.label }]}>{selectedCountry.capital}</Text>
+                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>Capital</Text>
                 </View>
-                <View style={styles.infoBox}>
-                  <Ionicons name="people" size={20} color={IOSColors.systemBlue} />
-                  <Text style={styles.infoBoxVal}>{selectedCountry.population}</Text>
-                  <Text style={styles.infoBoxLbl}>Población</Text>
+                <View style={[styles.infoBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+                  <Ionicons name="people" size={20} color={colors.systemBlue} />
+                  <Text style={[styles.infoBoxVal, { color: colors.label }]}>{selectedCountry.population}</Text>
+                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>Población</Text>
                 </View>
               </View>
 
-              <View style={styles.modalFactBox}>
+              <View style={[styles.modalFactBox, { backgroundColor: isDark ? 'rgba(255, 149, 0, 0.16)' : 'rgba(255, 149, 0, 0.08)', borderColor: isDark ? 'rgba(255, 149, 0, 0.3)' : 'rgba(255, 149, 0, 0.2)' }]}>
                 <View style={styles.factHead}>
-                  <Ionicons name="bulb" size={20} color={IOSColors.systemOrange} />
-                  <Text style={styles.factHeadText}>Dato Curioso</Text>
+                  <Ionicons name="bulb" size={20} color={colors.systemOrange} />
+                  <Text style={[styles.factHeadText, { color: colors.systemOrange }]}>Dato Curioso</Text>
                 </View>
-                <Text style={styles.factBodyText}>{selectedCountry.fact}</Text>
+                <Text style={[styles.factBodyText, { color: colors.label }]}>{selectedCountry.fact}</Text>
               </View>
 
               <AppleButton
                 title="Listo"
                 onPress={() => setSelectedCountry(null)}
                 variant="secondary"
-                style={{ marginTop: 24 }}
+                style={{ marginTop: 24, width: '100%' }}
               />
             </ScrollView>
           </View>

@@ -7,6 +7,8 @@ import { TabType } from '../types';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface AppleTabBarProps {
   currentTab: TabType;
   onTabChange: (tab: TabType) => void;
@@ -48,6 +50,7 @@ const TABS: TabItem[] = [
 
 export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChange }) => {
   const insets = useSafeAreaInsets();
+  const { isDark, colors } = useTheme();
 
   const handlePress = (tab: TabType) => {
     if (tab !== currentTab) {
@@ -71,13 +74,13 @@ export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChang
               <Ionicons
                 name={isActive ? tab.iconActive : tab.iconInactive}
                 size={24}
-                color={isActive ? IOSColors.systemBlue : IOSColors.tertiaryLabel}
+                color={isActive ? colors.systemBlue : colors.tertiaryLabel}
               />
             </View>
             <Text
               style={[
                 styles.tabLabel,
-                { color: isActive ? IOSColors.systemBlue : IOSColors.tertiaryLabel },
+                { color: isActive ? colors.systemBlue : colors.tertiaryLabel },
                 isActive && styles.tabLabelActive,
               ]}
             >
@@ -90,13 +93,15 @@ export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChang
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopColor: colors.tabBarBorder }]}>
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={90} tint="light" style={styles.blurWrap}>
+        <BlurView intensity={85} tint={isDark ? 'dark' : 'light'} style={styles.blurWrap}>
           {content}
         </BlurView>
       ) : (
-        <View style={styles.solidWrap}>{content}</View>
+        <View style={[styles.solidWrap, { backgroundColor: colors.tabBarBackground }]}>
+          {content}
+        </View>
       )}
     </View>
   );

@@ -23,6 +23,9 @@ import { AppleHeader } from '../components/AppleHeader';
 import { AppleCard } from '../components/AppleCard';
 import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { useTheme } from '../context/ThemeContext';
+import { ThemePreference } from '../types';
 
 const AVATARS = ['🧭', '🦁', '🚀', '🦅', '👑', '⚡', '🌍', '🦊', '🐼', '🐯', '🎯', '🔥'];
 
@@ -30,6 +33,7 @@ export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats, achievements, updateProfile, toggleSound, toggleHaptics, toggleFastAnswerOpportunity, resetProgress, exportBackupData, importBackupData } = useGame();
+  const { themePreference, isDark, colors, setThemePreference } = useTheme();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState(stats.username || 'Explorador');
@@ -244,30 +248,30 @@ export const ProfileScreen: React.FC = () => {
         </AppleCard>
 
         {/* Global Statistics */}
-        <Text style={styles.sectionHeader}>ESTADÍSTICAS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>ESTADÍSTICAS</Text>
         <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
-            <Ionicons name="game-controller" size={24} color={IOSColors.systemBlue} />
-            <Text style={styles.statVal}>{stats.gamesPlayed}</Text>
-            <Text style={styles.statLbl}>Partidas</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+            <Ionicons name="game-controller" size={24} color={colors.systemBlue} />
+            <Text style={[styles.statVal, { color: colors.label }]}>{stats.gamesPlayed}</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Partidas</Text>
           </View>
 
-          <View style={styles.statBox}>
-            <Ionicons name="flame" size={24} color={IOSColors.systemOrange} />
-            <Text style={[styles.statVal, { color: IOSColors.systemOrange }]}>{stats.bestStreak}</Text>
-            <Text style={styles.statLbl}>Mejor Racha</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+            <Ionicons name="flame" size={24} color={colors.systemOrange} />
+            <Text style={[styles.statVal, { color: colors.systemOrange }]}>{stats.bestStreak}</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
           </View>
 
-          <View style={styles.statBox}>
-            <Ionicons name="checkmark-done-circle" size={24} color={IOSColors.systemGreen} />
-            <Text style={styles.statVal}>{stats.correctAnswers}</Text>
-            <Text style={styles.statLbl}>Banderas Acertadas</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+            <Ionicons name="checkmark-done-circle" size={24} color={colors.systemGreen} />
+            <Text style={[styles.statVal, { color: colors.label }]}>{stats.correctAnswers}</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Banderas Acertadas</Text>
           </View>
 
-          <View style={styles.statBox}>
-            <Ionicons name="pie-chart" size={24} color={IOSColors.systemPurple} />
-            <Text style={[styles.statVal, { color: IOSColors.systemPurple }]}>{accuracy}%</Text>
-            <Text style={styles.statLbl}>Precisión Global</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
+            <Ionicons name="pie-chart" size={24} color={colors.systemPurple} />
+            <Text style={[styles.statVal, { color: colors.systemPurple }]}>{accuracy}%</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Precisión Global</Text>
           </View>
         </View>
 
@@ -366,42 +370,77 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Settings */}
-        <Text style={styles.sectionHeader}>AJUSTES DE LA APLICACIÓN</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>AJUSTES DE LA APLICACIÓN</Text>
         <AppleCard style={styles.settingsCard}>
+          {/* Apariencia / Modo Oscuro */}
+          <View style={styles.settingRow}>
+            <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
+              <Ionicons
+                name={isDark ? "moon" : "sunny"}
+                size={22}
+                color={isDark ? colors.systemIndigo : colors.systemYellow}
+                style={{ marginRight: 12 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>Tema de Apariencia</Text>
+                <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
+                  {themePreference === 'system'
+                    ? `Automático del Sistema (${isDark ? 'Oscuro activo' : 'Claro activo'})`
+                    : themePreference === 'dark'
+                    ? 'Modo Oscuro siempre activo'
+                    : 'Modo Claro siempre activo'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 12, paddingBottom: 10, paddingTop: 4 }}>
+            <SegmentedControl
+              values={['📱 Sistema', '☀️ Claro', '🌙 Oscuro']}
+              selectedIndex={themePreference === 'system' ? 0 : themePreference === 'light' ? 1 : 2}
+              onChange={(index) => {
+                const prefs: ThemePreference[] = ['system', 'light', 'dark'];
+                setThemePreference(prefs[index]);
+              }}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
           <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
-              <Ionicons name="volume-high" size={22} color={IOSColors.systemBlue} style={{ marginRight: 12 }} />
-              <Text style={styles.settingTitle}>Efectos de Sonido</Text>
+              <Ionicons name="volume-high" size={22} color={colors.systemBlue} style={{ marginRight: 12 }} />
+              <Text style={[styles.settingTitle, { color: colors.label }]}>Efectos de Sonido</Text>
             </View>
             <Switch
               value={stats.soundEnabled}
               onValueChange={toggleSound}
-              trackColor={{ false: '#E5E5EA', true: IOSColors.systemGreen }}
+              trackColor={{ false: isDark ? '#38383A' : '#E5E5EA', true: colors.systemGreen }}
             />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
           <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
-              <Ionicons name="hardware-chip" size={22} color={IOSColors.systemPurple} style={{ marginRight: 12 }} />
-              <Text style={styles.settingTitle}>Vibración Háptica (iOS)</Text>
+              <Ionicons name="hardware-chip" size={22} color={colors.systemPurple} style={{ marginRight: 12 }} />
+              <Text style={[styles.settingTitle, { color: colors.label }]}>Vibración Háptica (iOS)</Text>
             </View>
             <Switch
               value={stats.hapticsEnabled}
               onValueChange={toggleHaptics}
-              trackColor={{ false: '#E5E5EA', true: IOSColors.systemGreen }}
+              trackColor={{ false: isDark ? '#38383A' : '#E5E5EA', true: colors.systemGreen }}
             />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
           <View style={styles.settingRow}>
             <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
-              <Ionicons name="flash" size={22} color={IOSColors.systemOrange} style={{ marginRight: 12 }} />
+              <Ionicons name="flash" size={22} color={colors.systemOrange} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.settingTitle}>Segunda Oportunidad Veloz</Text>
-                <Text style={styles.settingSubtitle}>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>Segunda Oportunidad Veloz</Text>
+                <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
                   Gana un escudo de perdón al responder en &lt; 2.5s. Desactívalo para el modo clásico sin ayudas.
                 </Text>
               </View>
@@ -409,7 +448,7 @@ export const ProfileScreen: React.FC = () => {
             <Switch
               value={stats.fastAnswerOpportunityEnabled !== false}
               onValueChange={toggleFastAnswerOpportunity}
-              trackColor={{ false: '#E5E5EA', true: IOSColors.systemGreen }}
+              trackColor={{ false: isDark ? '#38383A' : '#E5E5EA', true: colors.systemGreen }}
             />
           </View>
         </AppleCard>
@@ -431,14 +470,14 @@ export const ProfileScreen: React.FC = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={[styles.modalContainer, { paddingTop: Platform.OS === 'android' ? topInset : 16 }]}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.systemBackground, paddingTop: Platform.OS === 'android' ? topInset : 16 }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.separator }]}>
             <Pressable onPress={() => setShowEditModal(false)} hitSlop={10}>
               <Text style={styles.modalCancelText}>Cancelar</Text>
             </Pressable>
-            <Text style={styles.modalTitle}>Editar Perfil</Text>
+            <Text style={[styles.modalTitle, { color: colors.label }]}>Editar Perfil</Text>
             <Pressable onPress={handleSaveEdit} hitSlop={10}>
-              <Text style={styles.modalDoneText}>Guardar</Text>
+              <Text style={[styles.modalDoneText, { color: colors.systemBlue }]}>Guardar</Text>
             </Pressable>
           </View>
 
@@ -463,11 +502,11 @@ export const ProfileScreen: React.FC = () => {
               </View>
             </View>
 
-            <View style={[styles.inputWrapper, !!usernameError && styles.inputWrapperError]}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.cardBorder }, !!usernameError && styles.inputWrapperError]}>
               <Ionicons
                 name="person-outline"
                 size={20}
-                color={usernameError ? IOSColors.systemRed : IOSColors.secondaryLabel}
+                color={usernameError ? colors.systemRed : colors.secondaryLabel}
                 style={{ marginRight: 10 }}
               />
               <TextInput
@@ -479,9 +518,9 @@ export const ProfileScreen: React.FC = () => {
                   }
                 }}
                 placeholder="Escribe tu apodo..."
-                placeholderTextColor={IOSColors.tertiaryLabel}
+                placeholderTextColor={colors.tertiaryLabel}
                 maxLength={18}
-                style={styles.modalInput}
+                style={[styles.modalInput, { color: colors.label }]}
                 autoCorrect={false}
               />
               {editUsername.length > 0 && (
@@ -492,7 +531,7 @@ export const ProfileScreen: React.FC = () => {
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons name="close-circle" size={18} color={IOSColors.tertiaryLabel} />
+                  <Ionicons name="close-circle" size={18} color={colors.tertiaryLabel} />
                 </Pressable>
               )}
             </View>
@@ -534,30 +573,30 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Favorite Country / Flag */}
             <View style={styles.countryHeaderRow}>
-              <Text style={styles.modalSectionLabel}>PAÍS O BANDERA FAVORITA</Text>
+              <Text style={[styles.modalSectionLabel, { color: colors.secondaryLabel }]}>PAÍS O BANDERA FAVORITA</Text>
               {selectedEditCountry && (
-                <View style={styles.selectedCountryPill}>
+                <View style={[styles.selectedCountryPill, { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
                   <Text style={styles.selectedCountryPillFlag}>{selectedEditCountry.flagEmoji}</Text>
-                  <Text style={styles.selectedCountryPillText} numberOfLines={1}>
+                  <Text style={[styles.selectedCountryPillText, { color: colors.systemBlue }]} numberOfLines={1}>
                     {selectedEditCountry.name}
                   </Text>
                 </View>
               )}
             </View>
 
-            <View style={styles.countrySearchWrap}>
-              <Ionicons name="search" size={16} color={IOSColors.tertiaryLabel} style={{ marginRight: 8 }} />
+            <View style={[styles.countrySearchWrap, { backgroundColor: colors.surface, borderColor: colors.cardBorder }]}>
+              <Ionicons name="search" size={16} color={colors.tertiaryLabel} style={{ marginRight: 8 }} />
               <TextInput
                 value={countrySearch}
                 onChangeText={setCountrySearch}
                 placeholder="Buscar país..."
-                placeholderTextColor={IOSColors.tertiaryLabel}
-                style={styles.countrySearchInput}
+                placeholderTextColor={colors.tertiaryLabel}
+                style={[styles.countrySearchInput, { color: colors.label }]}
                 autoCorrect={false}
               />
               {countrySearch.length > 0 && (
                 <Pressable onPress={() => setCountrySearch('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={16} color={IOSColors.tertiaryLabel} />
+                  <Ionicons name="close-circle" size={16} color={colors.tertiaryLabel} />
                 </Pressable>
               )}
             </View>
@@ -615,12 +654,12 @@ export const ProfileScreen: React.FC = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowRestoreModal(false)}
       >
-        <View style={[styles.modalContainer, { paddingTop: topInset }]}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.separator }]}>
             <Pressable onPress={() => setShowRestoreModal(false)} hitSlop={10}>
               <Text style={styles.modalCancelText}>Cancelar</Text>
             </Pressable>
-            <Text style={styles.modalTitle}>Restaurar Datos</Text>
+            <Text style={[styles.modalTitle, { color: colors.label }]}>Restaurar Datos</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -630,10 +669,10 @@ export const ProfileScreen: React.FC = () => {
           >
             <View style={styles.restoreHeaderIconWrap}>
               <View style={styles.restoreIconCircleBig}>
-                <Ionicons name="cloud-download" size={36} color={IOSColors.systemBlue} />
+                <Ionicons name="cloud-download" size={36} color={colors.systemBlue} />
               </View>
-              <Text style={styles.restorePromptTitle}>Recupera tu Progreso</Text>
-              <Text style={styles.restorePromptSub}>
+              <Text style={[styles.restorePromptTitle, { color: colors.label }]}>Recupera tu Progreso</Text>
+              <Text style={[styles.restorePromptSub, { color: colors.secondaryLabel }]}>
                 Pega a continuación el texto o JSON del respaldo que guardaste previamente:
               </Text>
             </View>
@@ -645,10 +684,14 @@ export const ProfileScreen: React.FC = () => {
                 if (restoreError) setRestoreError(null);
               }}
               placeholder='Pega aquí el código JSON del respaldo (ej: {"app":"Flags++", ...})'
-              placeholderTextColor={IOSColors.tertiaryLabel}
+              placeholderTextColor={colors.tertiaryLabel}
               multiline
               numberOfLines={6}
-              style={[styles.restoreInputArea, !!restoreError && styles.inputWrapperError]}
+              style={[
+                styles.restoreInputArea,
+                { backgroundColor: colors.surface, color: colors.label, borderColor: colors.cardBorder },
+                !!restoreError && styles.inputWrapperError,
+              ]}
               autoCorrect={false}
               autoCapitalize="none"
             />
@@ -865,7 +908,6 @@ const styles = StyleSheet.create({
   cloudCard: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#FFFFFF',
   },
   cloudRow: {
     flexDirection: 'row',
@@ -1095,7 +1137,6 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   modalHeader: {
     flexDirection: 'row',

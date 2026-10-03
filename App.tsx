@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { TabType } from './src/types';
 import { GameProvider, useGame } from './src/context/GameContext';
-import { IOSColors } from './src/utils/colors';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AppleTabBar } from './src/components/AppleTabBar';
 
 import { PlayScreen } from './src/screens/PlayScreen';
@@ -19,6 +19,7 @@ const MainNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [currentTab, setCurrentTab] = useState<TabType>('play');
   const { newAchievementUnlocked, clearAchievementNotification } = useGame();
+  const { isDark, colors } = useTheme();
 
   // Achievement Banner Animation
   const bannerY = useRef(new Animated.Value(-120)).current;
@@ -60,8 +61,8 @@ const MainNavigator: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: colors.systemBackground }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Screen Content */}
       <View style={styles.screenContainer}>{renderActiveScreen()}</View>
@@ -79,7 +80,14 @@ const MainNavigator: React.FC = () => {
         >
           <Pressable
             onPress={clearAchievementNotification}
-            style={styles.bannerInner}
+            style={[
+              styles.bannerInner,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+              colors.cardShadowLarge,
+            ]}
           >
             <View
               style={[
@@ -94,10 +102,14 @@ const MainNavigator: React.FC = () => {
               />
             </View>
             <View style={styles.bannerTextWrap}>
-              <Text style={styles.bannerPretitle}>¡LOGRO DESBLOQUEADO!</Text>
-              <Text style={styles.bannerTitle}>{newAchievementUnlocked.title}</Text>
+              <Text style={[styles.bannerPretitle, { color: colors.systemPurple }]}>
+                ¡LOGRO DESBLOQUEADO!
+              </Text>
+              <Text style={[styles.bannerTitle, { color: colors.label }]}>
+                {newAchievementUnlocked.title}
+              </Text>
             </View>
-            <Ionicons name="sparkles" size={18} color={IOSColors.goldStar} />
+            <Ionicons name="sparkles" size={18} color={colors.goldStar} />
           </Pressable>
         </Animated.View>
       )}
@@ -108,9 +120,11 @@ const MainNavigator: React.FC = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <GameProvider>
-        <MainNavigator />
-      </GameProvider>
+      <ThemeProvider>
+        <GameProvider>
+          <MainNavigator />
+        </GameProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -118,7 +132,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: IOSColors.systemBackground,
   },
   screenContainer: {
     flex: 1,
@@ -133,13 +146,10 @@ const styles = StyleSheet.create({
   bannerInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    ...IOSColors.cardShadowLarge,
   },
   bannerIconCircle: {
     width: 38,
@@ -155,12 +165,10 @@ const styles = StyleSheet.create({
   bannerPretitle: {
     fontSize: 10,
     fontWeight: '800',
-    color: IOSColors.systemPurple,
     letterSpacing: 0.8,
   },
   bannerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: IOSColors.label,
   },
 });

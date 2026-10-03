@@ -23,6 +23,7 @@ import { StreakBadge } from '../components/StreakBadge';
 import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
@@ -40,6 +41,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const { isDark, colors } = useTheme();
   const hasCountedGameRef = useRef(false);
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
@@ -475,11 +477,11 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
 
     return (
-      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryContainer}>
-          <Text style={styles.summaryPretitle}>RONDA COMPLETADA</Text>
-          <Text style={styles.summaryTitle}>
+          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>RONDA COMPLETADA</Text>
+          <Text style={[styles.summaryTitle, { color: colors.label }]}>
             {stars === 3 ? '¡Excelente!' : stars === 2 ? '¡Gran Trabajo!' : '¡Sigue Practicando!'}
           </Text>
 
@@ -489,21 +491,21 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               <Ionicons
                 name="star"
                 size={54}
-                color={stars >= 1 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+                color={stars >= 1 ? colors.goldStar : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(120, 120, 128, 0.2)'}
               />
             </Animated.View>
             <Animated.View style={[{ transform: [{ scale: star2Scale }] }, styles.centerStar]}>
               <Ionicons
                 name="star"
                 size={70}
-                color={stars >= 2 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+                color={stars >= 2 ? colors.goldStar : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(120, 120, 128, 0.2)'}
               />
             </Animated.View>
             <Animated.View style={{ transform: [{ scale: star3Scale }] }}>
               <Ionicons
                 name="star"
                 size={54}
-                color={stars >= 3 ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+                color={stars >= 3 ? colors.goldStar : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(120, 120, 128, 0.2)'}
               />
             </Animated.View>
           </View>
@@ -517,6 +519,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               }}
               style={({ pressed }) => [
                 styles.statBox,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                  borderWidth: 1,
+                },
+                colors.cardShadow,
                 styles.statBoxInteractive,
                 pressed && styles.statBoxPressed,
               ]}
@@ -525,23 +533,23 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 <Ionicons name="eye" size={11} color="#FFFFFF" />
                 <Text style={styles.reviewBadgeHintText}>VER</Text>
               </View>
-              <Text style={styles.statNumber}>{score}/{questions.length}</Text>
-              <Text style={[styles.statLabel, { color: IOSColors.systemBlue, fontWeight: '700' }]}>
+              <Text style={[styles.statNumber, { color: colors.label }]}>{score}/{questions.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.systemBlue, fontWeight: '700' }]}>
                 Aciertos 👆
               </Text>
             </Pressable>
 
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemGreen }]}>{accuracy}%</Text>
-              <Text style={styles.statLabel}>Precisión</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemGreen }]}>{accuracy}%</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Precisión</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemPurple }]}>+{xpEarned}</Text>
-              <Text style={styles.statLabel}>XP Ganada</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{xpEarned}</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Ganada</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={styles.statLabel}>Mejor Racha</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
             </View>
           </View>
 
@@ -565,7 +573,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
             {/* Quick Question Count Switcher on Game Over */}
             <View style={styles.summaryCountRow}>
-              <Text style={styles.summaryCountLabel}>Preguntas para la próxima ronda:</Text>
+              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>Preguntas para la próxima ronda:</Text>
               <View style={styles.summaryCountChips}>
                 {([10, 20, 50, 'all'] as const).map((cnt) => {
                   const isSel = questionCount === cnt;
@@ -580,10 +588,23 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                       }}
                       style={[
                         styles.summaryCountChip,
-                        isSel && styles.summaryCountChipActive,
+                        {
+                          backgroundColor: colors.cardBackground,
+                          borderColor: colors.cardBorder,
+                        },
+                        isSel && {
+                          backgroundColor: colors.systemBlue,
+                          borderColor: colors.systemBlue,
+                        },
                       ]}
                     >
-                      <Text style={[styles.summaryCountChipText, isSel && styles.summaryCountChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.summaryCountChipText,
+                          { color: colors.label },
+                          isSel && styles.summaryCountChipTextActive,
+                        ]}
+                      >
                         {lbl}
                       </Text>
                     </Pressable>
@@ -634,19 +655,19 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerControlRow}>
-          <Pressable onPress={handleCloseQuiz} style={styles.closeBtn} hitSlop={12}>
-            <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
+          <Pressable onPress={handleCloseQuiz} style={[styles.closeBtn, { backgroundColor: colors.cardBackground }]} hitSlop={12}>
+            <Ionicons name="arrow-back" size={22} color={colors.label} />
           </Pressable>
 
           <View style={[styles.timerPill, timeLeft <= 4 && styles.timerPillUrgent]}>
             <Ionicons
               name="timer"
               size={15}
-              color={timeLeft <= 4 ? '#FF3B30' : IOSColors.systemBlue}
+              color={timeLeft <= 4 ? '#FF3B30' : colors.systemBlue}
             />
             <Text style={[styles.timerText, timeLeft <= 4 && styles.timerTextUrgent]}>
               {timeLeft}s
@@ -661,8 +682,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               </View>
             )}
             <View style={styles.scorePill}>
-              <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
-              <Text style={styles.scorePillText}>{score} pts</Text>
+              <Ionicons name="trophy" size={13} color={colors.systemPurple} />
+              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} pts</Text>
             </View>
             <StreakBadge streak={currentStreak} size="small" />
           </View>
@@ -670,7 +691,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
         <View style={styles.progressContainer}>
           <ProgressBar progress={progress} height={6} />
-          <Text style={styles.questionCounter}>
+          <Text style={[styles.questionCounter, { color: colors.tertiaryLabel }]}>
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
@@ -711,12 +732,15 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           style={[
             styles.questionCard,
             {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+              borderWidth: 1,
               opacity: cardOpacity,
               transform: [{ scale: cardScale }, { translateX: shakeAnim }],
             },
           ]}
         >
-          <Text style={styles.promptText}>¿A qué país pertenece esta bandera?</Text>
+          <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>¿A qué país pertenece esta bandera?</Text>
 
           <View style={styles.flagWrap}>
             <FlagImage
@@ -757,29 +781,52 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             const isTimeout = isAnswered && selectedOptionIndex === null;
             const isEliminated = eliminatedOptions.includes(idx);
 
-            let cardStyle: any = styles.optionNormal;
+            let cardStyle: any = {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+            };
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
-            let iconColor = IOSColors.secondaryLabel;
+            let iconColor = colors.secondaryLabel;
 
             if (isEliminated) {
-              cardStyle = styles.optionEliminated;
+              cardStyle = {
+                backgroundColor: isDark ? 'rgba(255, 59, 48, 0.12)' : 'rgba(255, 59, 48, 0.06)',
+                borderColor: isDark ? 'rgba(255, 59, 48, 0.35)' : 'rgba(255, 59, 48, 0.25)',
+                opacity: 0.65,
+              };
               iconName = 'close-circle';
-              iconColor = IOSColors.systemRed;
+              iconColor = colors.systemRed;
             } else if (isAnswered) {
               if (isTimeout) {
                 if (isCorrectOption) {
-                  cardStyle = styles.optionTimeoutReveal;
+                  cardStyle = {
+                    backgroundColor: isDark ? 'rgba(255, 159, 10, 0.18)' : 'rgba(255, 149, 0, 0.08)',
+                    borderColor: colors.systemOrange,
+                    borderWidth: 1.5,
+                  };
                 } else {
-                  cardStyle = styles.optionDimmed;
+                  cardStyle = {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                    opacity: 0.45,
+                  };
                 }
               } else if (isCorrectOption) {
-                cardStyle = styles.optionCorrect;
+                cardStyle = {
+                  backgroundColor: colors.correctCardBackground,
+                  borderColor: colors.systemGreen,
+                  borderWidth: 1.5,
+                };
                 iconName = 'checkmark-circle';
-                iconColor = IOSColors.systemGreen;
+                iconColor = colors.systemGreen;
               } else if (isSelected) {
-                cardStyle = styles.optionWrong;
+                cardStyle = {
+                  backgroundColor: colors.wrongCardBackground,
+                  borderColor: colors.systemRed,
+                  borderWidth: 1.5,
+                };
                 iconName = 'close-circle';
-                iconColor = IOSColors.systemRed;
+                iconColor = colors.systemRed;
               }
             }
 
@@ -788,23 +835,32 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 key={option.code}
                 onPress={() => handleSelectOption(idx)}
                 disabled={isAnswered || isEliminated}
-                style={[styles.optionCard, cardStyle]}
+                style={[
+                  styles.optionCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                  colors.cardShadow,
+                  cardStyle,
+                ]}
               >
                 <Text
                   style={[
                     styles.optionText,
+                    { color: colors.label },
                     isEliminated && styles.optionTextEliminated,
-                    isAnswered && !isTimeout && isCorrectOption && styles.optionTextCorrect,
-                    isAnswered && isSelected && !isCorrectOption && styles.optionTextWrong,
+                    isAnswered && !isTimeout && isCorrectOption && { color: colors.systemGreen },
+                    isAnswered && isSelected && !isCorrectOption && { color: colors.systemRed },
                     isTimeout && isCorrectOption && styles.optionTextTimeoutReveal,
-                    isTimeout && !isCorrectOption && styles.optionTextDimmed,
+                    isTimeout && !isCorrectOption && { color: colors.tertiaryLabel },
                   ]}
                 >
                   {option.name}
                 </Text>
                 {isEliminated ? (
                   <View style={styles.eliminatedBadge}>
-                    <Ionicons name="shield" size={11} color={IOSColors.systemRed} />
+                    <Ionicons name="shield" size={11} color={colors.systemRed} />
                     <Text style={styles.eliminatedBadgeText}>Descartada</Text>
                   </View>
                 ) : isTimeout && isCorrectOption ? (
@@ -822,14 +878,23 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
         {/* Country Fact Sheet */}
         {isAnswered && (
-          <View style={styles.factContainer}>
+          <View
+            style={[
+              styles.factContainer,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: isDark ? 'rgba(10, 132, 255, 0.3)' : 'rgba(0, 122, 255, 0.15)',
+              },
+              colors.cardShadow,
+            ]}
+          >
             <View style={styles.factHeader}>
-              <Ionicons name="information-circle" size={18} color={IOSColors.systemBlue} />
-              <Text style={styles.factTitle}>¿Sabías que...?</Text>
+              <Ionicons name="information-circle" size={18} color={colors.systemBlue} />
+              <Text style={[styles.factTitle, { color: colors.systemBlue }]}>¿Sabías que...?</Text>
             </View>
-            <Text style={styles.factText}>{currentQ.targetCountry.fact}</Text>
-            <Text style={styles.factCapital}>
-              Capital: <Text style={{ fontWeight: '700' }}>{currentQ.targetCountry.capital}</Text> • Población: {currentQ.targetCountry.population}
+            <Text style={[styles.factText, { color: colors.label }]}>{currentQ.targetCountry.fact}</Text>
+            <Text style={[styles.factCapital, { color: colors.secondaryLabel }]}>
+              Capital: <Text style={{ fontWeight: '700', color: colors.label }}>{currentQ.targetCountry.capital}</Text> • Población: {currentQ.targetCountry.population}
             </Text>
           </View>
         )}
@@ -840,6 +905,11 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             onPress={handleNext}
             style={({ pressed }) => [
               styles.autoAdvanceCard,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: isDark ? 'rgba(10, 132, 255, 0.35)' : 'rgba(0, 122, 255, 0.18)',
+              },
+              colors.cardShadow,
               pressed && { transform: [{ scale: 0.98 }] },
             ]}
           >
@@ -863,10 +933,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     size={14}
                     color={
                       selectedOptionIndex === null
-                        ? IOSColors.systemRed
+                        ? colors.systemRed
                         : selectedOptionIndex === currentQ.correctOptionIndex
-                        ? IOSColors.systemGreen
-                        : IOSColors.systemOrange
+                        ? colors.systemGreen
+                        : colors.systemOrange
                     }
                   />
                 </View>
@@ -874,7 +944,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                   <Text
                     style={[
                       styles.autoAdvanceTitle,
-                      selectedOptionIndex === null && { color: IOSColors.systemRed },
+                      { color: colors.label },
+                      selectedOptionIndex === null && { color: colors.systemRed },
                     ]}
                     numberOfLines={1}
                   >
@@ -884,20 +955,20 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                       ? 'Siguiente Pregunta'
                       : 'Ver Resultados'}
                   </Text>
-                  <Text style={styles.autoAdvanceSubtitle} numberOfLines={1}>
+                  <Text style={[styles.autoAdvanceSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
                     {selectedOptionIndex === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.skipBtnPill}>
-                <Text style={styles.skipBtnText}>Saltar</Text>
-                <Ionicons name="arrow-forward" size={12} color={IOSColors.systemBlue} style={{ marginLeft: 3 }} />
+              <View style={[styles.skipBtnPill, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
+                <Text style={[styles.skipBtnText, { color: colors.systemBlue }]}>Saltar</Text>
+                <Ionicons name="arrow-forward" size={12} color={colors.systemBlue} style={{ marginLeft: 3 }} />
               </View>
             </View>
 
             {/* Micro timer track */}
-            <View style={styles.countdownTrack}>
+            <View style={[styles.countdownTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
               <Animated.View
                 style={[
                   styles.countdownFill,
@@ -908,8 +979,8 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     }),
                     backgroundColor:
                       selectedOptionIndex === currentQ.correctOptionIndex
-                        ? IOSColors.systemGreen
-                        : IOSColors.systemBlue,
+                        ? colors.systemGreen
+                        : colors.systemBlue,
                   },
                 ]}
               />

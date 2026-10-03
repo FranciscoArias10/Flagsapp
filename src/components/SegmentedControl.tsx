@@ -10,6 +10,8 @@ import {
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface SegmentedControlProps {
   values: string[];
   selectedIndex: number;
@@ -23,6 +25,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   style,
 }) => {
+  const { isDark, colors } = useTheme();
   const [segmentWidth, setSegmentWidth] = React.useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -52,13 +55,21 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   };
 
   return (
-    <View style={[styles.container, style]} onLayout={onLayout}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? 'rgba(118, 118, 128, 0.28)' : 'rgba(118, 118, 128, 0.12)' },
+        style,
+      ]}
+      onLayout={onLayout}
+    >
       {segmentWidth > 0 && (
         <Animated.View
           style={[
             styles.activeIndicator,
             {
               width: segmentWidth,
+              backgroundColor: isDark ? '#636366' : '#FFFFFF',
               transform: [{ translateX: slideAnim }],
             },
           ]}
@@ -76,7 +87,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               <Text
                 style={[
                   styles.segmentText,
-                  isSelected ? styles.segmentTextActive : styles.segmentTextInactive,
+                  { color: isSelected ? colors.label : colors.secondaryLabel },
+                  isSelected && styles.segmentTextActive,
                 ]}
                 numberOfLines={1}
               >
@@ -93,7 +105,6 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 const styles = StyleSheet.create({
   container: {
     height: 38,
-    backgroundColor: 'rgba(118, 118, 128, 0.12)',
     borderRadius: 12,
     padding: 2,
     position: 'relative',
@@ -104,7 +115,6 @@ const styles = StyleSheet.create({
     left: 2,
     top: 2,
     bottom: 2,
-    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -130,10 +140,5 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     fontWeight: '600',
-    color: IOSColors.label,
-  },
-  segmentTextInactive: {
-    fontWeight: '500',
-    color: IOSColors.secondaryLabel,
   },
 });

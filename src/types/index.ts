@@ -73,6 +73,9 @@ export interface UserStats {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
   fastAnswerOpportunityEnabled?: boolean;
+  themePreference?: ThemePreference;
 }
+
+export type ThemePreference = 'system' | 'light' | 'dark';
 
 export type TabType = 'play' | 'capitals' | 'atlas' | 'profile';

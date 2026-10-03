@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
+import { useTheme } from '../context/ThemeContext';
 import { AppleButton } from './AppleButton';
 
 export interface GameStartModalProps {
@@ -43,6 +44,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
   showTimeSelector = true,
   totalAvailable,
 }) => {
+  const { isDark, colors } = useTheme();
   const [selectedCount, setSelectedCount] = useState<number | 'all'>(initialCount);
   const [selectedTime, setSelectedTime] = useState<number>(initialTime);
 
@@ -86,9 +88,9 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.sheetContainer}>
+            <View style={[styles.sheetContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
               {/* Top Grabber */}
-              <View style={styles.grabber} />
+              <View style={[styles.grabber, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)' }]} />
 
               {/* Close Button */}
               <Pressable
@@ -99,7 +101,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                 style={styles.closeBtn}
                 hitSlop={12}
               >
-                <Ionicons name="close-circle" size={28} color={IOSColors.tertiaryLabel} />
+                <Ionicons name="close-circle" size={28} color={colors.tertiaryLabel} />
               </Pressable>
 
               {/* Header */}
@@ -113,11 +115,11 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                   <Ionicons name={icon} size={26} color="#FFFFFF" />
                 </LinearGradient>
                 <View style={styles.headerText}>
-                  <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={[styles.title, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
                     {title}
                   </Text>
                   {subtitle && (
-                    <Text style={styles.subtitle} numberOfLines={1}>
+                    <Text style={[styles.subtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
                       {subtitle}
                     </Text>
                   )}
@@ -127,7 +129,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
               {/* Section 1: Question Count Selector */}
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionLabel}>CANTIDAD DE PREGUNTAS</Text>
+                  <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>CANTIDAD DE PREGUNTAS</Text>
                   <Text style={[styles.sectionSub, { color }]}>
                     {selectedCount === 'all'
                       ? totalAvailable ? `${totalAvailable} Preguntas (Todas)` : 'Catálogo Completo'
@@ -145,10 +147,11 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                         onPress={() => handleSelectCount(cnt)}
                         style={[
                           styles.chip,
+                          { backgroundColor: colors.surface, borderColor: colors.cardBorder },
                           isSel && [styles.chipActive, { backgroundColor: color, borderColor: color }],
                         ]}
                       >
-                        <Text style={[styles.chipText, isSel && styles.chipTextActive]}>
+                        <Text style={[styles.chipText, { color: isSel ? '#FFFFFF' : colors.label }]}>
                           {lbl}
                         </Text>
                       </Pressable>
@@ -161,7 +164,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
               {showTimeSelector ? (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionLabel}>TIEMPO POR PREGUNTA</Text>
+                    <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>TIEMPO POR PREGUNTA</Text>
                     <Text style={[styles.sectionSub, { color }]}>
                       {selectedTime} segundos
                     </Text>
@@ -176,18 +179,19 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                           onPress={() => handleSelectTime(opt.sec)}
                           style={[
                             styles.timeChip,
+                            { backgroundColor: colors.surface, borderColor: colors.cardBorder },
                             isSel && [styles.chipActive, { backgroundColor: color, borderColor: color }],
                           ]}
                         >
                           <Ionicons
                             name="timer-outline"
                             size={14}
-                            color={isSel ? '#FFFFFF' : IOSColors.secondaryLabel}
+                            color={isSel ? '#FFFFFF' : colors.secondaryLabel}
                           />
-                          <Text style={[styles.timeChipText, isSel && styles.chipTextActive]}>
+                          <Text style={[styles.timeChipText, { color: isSel ? '#FFFFFF' : colors.label }]}>
                             {opt.label}
                           </Text>
-                          <Text style={[styles.timeChipSub, isSel && styles.timeChipSubActive]}>
+                          <Text style={[styles.timeChipSub, { color: isSel ? 'rgba(255, 255, 255, 0.85)' : colors.tertiaryLabel }]}>
                             {opt.sub}
                           </Text>
                         </Pressable>
@@ -196,7 +200,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                   </View>
                 </View>
               ) : (
-                <View style={styles.rhythmBadge}>
+                <View style={[styles.rhythmBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)' }]}>
                   <Ionicons name="flash" size={16} color={color} />
                   <Text style={[styles.rhythmBadgeText, { color }]}>
                     Ritmo fijado: {initialTime}s iniciales con bonus por acierto

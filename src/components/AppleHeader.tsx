@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface AppleHeaderProps {
   title: string;
   category?: string;
@@ -21,6 +23,8 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
   showBack = false,
   showLogo = false,
 }) => {
+  const { colors } = useTheme();
+
   const handleBack = () => {
     soundService.triggerLightTap();
     onBack?.();
@@ -30,13 +34,17 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
     <View style={styles.container}>
       {showBack && (
         <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
-          <Ionicons name="chevron-back" size={26} color={IOSColors.systemBlue} />
-          <Text style={styles.backText}>Atrás</Text>
+          <Ionicons name="chevron-back" size={26} color={colors.systemBlue} />
+          <Text style={[styles.backText, { color: colors.systemBlue }]}>Atrás</Text>
         </Pressable>
       )}
       <View style={styles.headerRow}>
         <View style={styles.titleColumn}>
-          {category && <Text style={styles.categoryText}>{category.toUpperCase()}</Text>}
+          {category && (
+            <Text style={[styles.categoryText, { color: colors.systemBlue }]}>
+              {category.toUpperCase()}
+            </Text>
+          )}
           <View style={styles.titleRow}>
             {showLogo && (
               <Image
@@ -44,7 +52,12 @@ export const AppleHeader: React.FC<AppleHeaderProps> = ({
                 style={styles.logoImage}
               />
             )}
-            <Text style={styles.largeTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            <Text
+              style={[styles.largeTitle, { color: colors.label }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {title}
             </Text>
           </View>

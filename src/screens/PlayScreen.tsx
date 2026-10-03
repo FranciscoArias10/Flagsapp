@@ -24,11 +24,13 @@ import { ProgressBar } from '../components/ProgressBar';
 import { GameStartModal } from '../components/GameStartModal';
 import { QuizGameScreen } from './QuizGameScreen';
 import { BlitzGameScreen } from './BlitzGameScreen';
+import { useTheme } from '../context/ThemeContext';
 
 export const PlayScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats } = useGame();
+  const { isDark, colors } = useTheme();
   const levelInfo = getLevelInfo(stats.xp);
 
   const [activeQuizContinent, setActiveQuizContinent] = useState<Continent | 'Mundo' | null>(null);
@@ -94,7 +96,7 @@ export const PlayScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       <AppleHeader
         title="Flags++"
         category="TRIVIA & GEOGRAFÍA"
@@ -103,8 +105,8 @@ export const PlayScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <StreakBadge streak={stats.streak} size="small" />
             <View style={styles.xpPill}>
-              <Ionicons name="sparkles" size={13} color={IOSColors.systemPurple} />
-              <Text style={styles.xpPillText}>{stats.xp} XP</Text>
+              <Ionicons name="sparkles" size={13} color={colors.systemPurple} />
+              <Text style={[styles.xpPillText, { color: colors.systemPurple }]}>{stats.xp} XP</Text>
             </View>
           </View>
         }
@@ -121,14 +123,14 @@ export const PlayScreen: React.FC = () => {
               <Text style={styles.userAvatarEmoji}>{stats.avatar || '🧭'}</Text>
             </View>
             <View style={styles.userStripMeta}>
-              <Text style={styles.userGreeting} numberOfLines={1}>¡Hola, {stats.username || 'Explorador'}!</Text>
-              <Text style={styles.userStripLevel} numberOfLines={1}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
-              <Text style={styles.userStripSub} numberOfLines={1}>
+              <Text style={[styles.userGreeting, { color: colors.label }]} numberOfLines={1}>¡Hola, {stats.username || 'Explorador'}!</Text>
+              <Text style={[styles.userStripLevel, { color: colors.systemPurple }]} numberOfLines={1}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
+              <Text style={[styles.userStripSub, { color: colors.secondaryLabel }]} numberOfLines={1}>
                 {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para subir de nivel` : '¡Nivel Legendario!'}
               </Text>
             </View>
             <View style={styles.userStripBadge}>
-              <Ionicons name="shield-checkmark" size={24} color={IOSColors.systemBlue} />
+              <Ionicons name="shield-checkmark" size={24} color={colors.systemBlue} />
             </View>
           </View>
           <ProgressBar progress={levelInfo.progress} height={6} style={{ marginTop: 10 }} />
@@ -199,7 +201,7 @@ export const PlayScreen: React.FC = () => {
         </Pressable>
 
         {/* Continents Grid */}
-        <Text style={styles.sectionTitle}>NIVELES POR CONTINENTE</Text>
+        <Text style={[styles.sectionTitle, { color: colors.secondaryLabel }]}>NIVELES POR CONTINENTE</Text>
         <View style={styles.continentsGrid}>
           {CONTINENTS.map((item) => {
             const prog = stats.continentProgress[item.name] || { correct: 0, total: 0, stars: 0 };
@@ -209,6 +211,12 @@ export const PlayScreen: React.FC = () => {
                 onPress={() => handleStartQuiz(item.name)}
                 style={({ pressed }) => [
                   styles.continentCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                    borderWidth: 1,
+                  },
+                  colors.cardShadow,
                   pressed && styles.cardPressed,
                 ]}
               >
@@ -224,8 +232,8 @@ export const PlayScreen: React.FC = () => {
                   {renderStars(prog.stars)}
                 </View>
 
-                <Text style={styles.continentName}>{item.name}</Text>
-                <Text style={styles.continentCount}>{item.count} Países</Text>
+                <Text style={[styles.continentName, { color: colors.label }]}>{item.name}</Text>
+                <Text style={[styles.continentCount, { color: colors.secondaryLabel }]}>{item.count} Países</Text>
 
                 <View style={styles.continentFooter}>
                   <View style={[styles.continentPlayBadge, { backgroundColor: `${item.color}15` }]}>
@@ -234,7 +242,7 @@ export const PlayScreen: React.FC = () => {
                     </Text>
                     <Ionicons name="play" size={11} color={item.color} />
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color={IOSColors.tertiaryLabel} />
+                  <Ionicons name="chevron-forward" size={14} color={colors.tertiaryLabel} />
                 </View>
               </Pressable>
             );

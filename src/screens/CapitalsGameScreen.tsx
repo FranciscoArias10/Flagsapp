@@ -26,6 +26,7 @@ import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 
 export type CapitalDifficulty = 'easy' | 'medium' | 'hard' | 'all';
 
@@ -130,6 +131,7 @@ export const CapitalsGameScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const { isDark, colors } = useTheme();
   const hasCountedGameRef = useRef(false);
 
   const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
@@ -621,7 +623,7 @@ export const CapitalsGameScreen: React.FC = () => {
             key={s}
             name="star"
             size={13}
-            color={stars >= s ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.25)'}
+            color={stars >= s ? colors.goldStar : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(120, 120, 128, 0.25)'}
           />
         ))}
       </View>
@@ -653,20 +655,20 @@ export const CapitalsGameScreen: React.FC = () => {
   // 1. DIFFICULTY SELECTION SCREEN
   if (screenMode === 'difficulty_select') {
     return (
-      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         {/* Header bar */}
         <View style={styles.diffHeaderBar}>
           <View style={styles.diffHeaderTopRow}>
-            <Text style={styles.diffPretitle} numberOfLines={1}>TRIVIA & APRENDIZAJE</Text>
+            <Text style={[styles.diffPretitle, { color: colors.secondaryLabel }]} numberOfLines={1}>TRIVIA & APRENDIZAJE</Text>
             <View style={styles.headerRight}>
               <StreakBadge streak={stats.streak} size="small" />
-              <View style={styles.xpPill}>
-                <Ionicons name="sparkles" size={13} color={IOSColors.systemPurple} />
-                <Text style={styles.xpPillText}>{stats.xp} XP</Text>
+              <View style={[styles.xpPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.12)' }]}>
+                <Ionicons name="sparkles" size={13} color={colors.systemPurple} />
+                <Text style={[styles.xpPillText, { color: colors.systemPurple }]}>{stats.xp} XP</Text>
               </View>
             </View>
           </View>
-          <Text style={styles.diffTitle} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={[styles.diffTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
             Capitales del Mundo
           </Text>
         </View>
@@ -676,7 +678,7 @@ export const CapitalsGameScreen: React.FC = () => {
           contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 130 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.diffSubtitle}>
+          <Text style={[styles.diffSubtitle, { color: colors.secondaryLabel }]}>
             Selecciona una dificultad. Las opciones serán ciudades del mismo país, ¡demuestra que conoces la verdadera capital!
           </Text>
 
@@ -693,6 +695,11 @@ export const CapitalsGameScreen: React.FC = () => {
                 onPress={() => handleStartWithDifficulty(diff.key)}
                 style={({ pressed }) => [
                   styles.diffCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                  colors.cardShadow,
                   isFeatured && styles.diffCardFeatured,
                   isHard && styles.diffCardHard,
                   pressed && { transform: [{ scale: 0.98 }] },
@@ -719,24 +726,24 @@ export const CapitalsGameScreen: React.FC = () => {
                       <View style={styles.diffStarsRow}>
                         {renderStars(prog.stars)}
                         {Boolean(prog.bestScore && prog.bestScore > 0) && (
-                          <Text style={styles.diffBestScoreText}>Mejor: {prog.bestScore} pts</Text>
+                          <Text style={[styles.diffBestScoreText, { color: colors.secondaryLabel }]}>Mejor: {prog.bestScore} pts</Text>
                         )}
                       </View>
                     </View>
-                    <Text style={styles.diffCardTitle} numberOfLines={1} adjustsFontSizeToFit>
+                    <Text style={[styles.diffCardTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
                       {diff.title}
                     </Text>
-                    <Text style={styles.diffCardSubtitle} numberOfLines={1}>
+                    <Text style={[styles.diffCardSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
                       {diff.subtitle}
                     </Text>
                   </View>
                 </View>
 
                 {/* Description and Examples */}
-                <Text style={styles.diffDescText}>{diff.description}</Text>
-                <View style={styles.diffExamplesBox}>
-                  <Text style={styles.diffExamplesLabel}>EJEMPLOS:</Text>
-                  <Text style={styles.diffExamplesText}>{diff.examples}</Text>
+                <Text style={[styles.diffDescText, { color: colors.label }]}>{diff.description}</Text>
+                <View style={[styles.diffExamplesBox, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
+                  <Text style={[styles.diffExamplesLabel, { color: colors.tertiaryLabel }]}>EJEMPLOS:</Text>
+                  <Text style={[styles.diffExamplesText, { color: colors.secondaryLabel }]}>{diff.examples}</Text>
                 </View>
 
                 {/* Bottom CTA bar */}
@@ -792,7 +799,7 @@ export const CapitalsGameScreen: React.FC = () => {
     const xpEarned = calculateXpEarned(score, questions.length, highestStreak);
 
     return (
-      <View style={[styles.container, { paddingTop: topInset, paddingBottom: 85 + insets.bottom }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: 85 + insets.bottom }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryWrap}>
           {/* Difficulty Badge */}
@@ -811,8 +818,8 @@ export const CapitalsGameScreen: React.FC = () => {
             </Text>
           </View>
 
-          <Text style={styles.summaryPretitle}>MODO CAPITALES</Text>
-          <Text style={styles.summaryTitle}>
+          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>MODO CAPITALES</Text>
+          <Text style={[styles.summaryTitle, { color: colors.label }]}>
             {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
           </Text>
 
@@ -822,7 +829,7 @@ export const CapitalsGameScreen: React.FC = () => {
                 key={s}
                 name="star"
                 size={s === 2 ? 64 : 50}
-                color={stars >= s ? IOSColors.goldStar : 'rgba(120, 120, 128, 0.2)'}
+                color={stars >= s ? colors.goldStar : isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(120, 120, 128, 0.2)'}
                 style={s === 2 ? styles.centerStar : undefined}
               />
             ))}
@@ -836,6 +843,12 @@ export const CapitalsGameScreen: React.FC = () => {
               }}
               style={({ pressed }) => [
                 styles.statBox,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                  borderWidth: 1,
+                },
+                colors.cardShadow,
                 styles.statBoxInteractive,
                 pressed && styles.statBoxPressed,
               ]}
@@ -844,23 +857,23 @@ export const CapitalsGameScreen: React.FC = () => {
                 <Ionicons name="eye" size={11} color="#FFFFFF" />
                 <Text style={styles.reviewBadgeHintText}>VER</Text>
               </View>
-              <Text style={styles.statNumber}>{score}/{questions.length}</Text>
-              <Text style={[styles.statLabel, { color: IOSColors.systemBlue, fontWeight: '700' }]}>
+              <Text style={[styles.statNumber, { color: colors.label }]}>{score}/{questions.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.systemBlue, fontWeight: '700' }]}>
                 Aciertos 👆
               </Text>
             </Pressable>
 
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemGreen }]}>{accuracy}%</Text>
-              <Text style={styles.statLabel}>Precisión</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemGreen }]}>{accuracy}%</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Precisión</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemPurple }]}>+{xpEarned}</Text>
-              <Text style={styles.statLabel}>XP Ganada</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{xpEarned}</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Ganada</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={styles.statLabel}>Racha</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Racha</Text>
             </View>
           </View>
 
@@ -883,7 +896,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
             {/* Quick Question Count Switcher on Game Over */}
             <View style={styles.summaryCountRow}>
-              <Text style={styles.summaryCountLabel}>Preguntas para la próxima ronda:</Text>
+              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>Preguntas para la próxima ronda:</Text>
               <View style={styles.summaryCountChips}>
                 {([10, 20, 50, 'all'] as const).map((cnt) => {
                   const isSel = selectedQuestionCount === cnt;
@@ -898,10 +911,23 @@ export const CapitalsGameScreen: React.FC = () => {
                       }}
                       style={[
                         styles.summaryCountChip,
-                        isSel && styles.summaryCountChipActive,
+                        {
+                          backgroundColor: colors.cardBackground,
+                          borderColor: colors.cardBorder,
+                        },
+                        isSel && {
+                          backgroundColor: colors.systemBlue,
+                          borderColor: colors.systemBlue,
+                        },
                       ]}
                     >
-                      <Text style={[styles.summaryCountChipText, isSel && styles.summaryCountChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.summaryCountChipText,
+                          { color: colors.label },
+                          isSel && styles.summaryCountChipTextActive,
+                        ]}
+                      >
                         {lbl}
                       </Text>
                     </Pressable>
@@ -931,16 +957,16 @@ export const CapitalsGameScreen: React.FC = () => {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       {/* Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerControlRow}>
           <Pressable
             onPress={handleBackToDifficulty}
-            style={styles.backBtn}
+            style={[styles.backBtn, { backgroundColor: colors.cardBackground }]}
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={22} color={IOSColors.label} />
+            <Ionicons name="arrow-back" size={22} color={colors.label} />
           </Pressable>
 
           <View style={[styles.timerPill, timeLeft <= 4 && styles.timerPillUrgent]}>
@@ -961,9 +987,9 @@ export const CapitalsGameScreen: React.FC = () => {
                 <Text style={styles.shieldPillText}>2ª Oportunidad</Text>
               </View>
             )}
-            <View style={styles.scorePill}>
-              <Ionicons name="trophy" size={13} color={IOSColors.systemPurple} />
-              <Text style={styles.scorePillText}>{score} pts</Text>
+            <View style={[styles.scorePill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.12)' }]}>
+              <Ionicons name="trophy" size={13} color={colors.systemPurple} />
+              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} pts</Text>
             </View>
             <StreakBadge streak={streak} size="small" />
           </View>
@@ -975,7 +1001,7 @@ export const CapitalsGameScreen: React.FC = () => {
             height={6}
             gradientColors={currentDiffConfig.gradient}
           />
-          <Text style={styles.questionCounter}>
+          <Text style={[styles.questionCounter, { color: colors.tertiaryLabel }]}>
             {currentIndex + 1} de {questions.length}
           </Text>
         </View>
@@ -1016,12 +1042,16 @@ export const CapitalsGameScreen: React.FC = () => {
           style={[
             styles.countryCard,
             {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+              borderWidth: 1,
               transform: [{ scale: cardScale }, { translateX: shakeAnim }],
             },
+            colors.cardShadow,
           ]}
         >
-          <Text style={styles.questionSubtitle}>¿Cuál es su capital?</Text>
-          <Text style={styles.countryName}>{currentQ.country.name}</Text>
+          <Text style={[styles.questionSubtitle, { color: colors.secondaryLabel }]}>¿Cuál es su capital?</Text>
+          <Text style={[styles.countryName, { color: colors.label }]}>{currentQ.country.name}</Text>
 
           <View style={styles.flagContainer}>
             <FlagImage
@@ -1033,9 +1063,9 @@ export const CapitalsGameScreen: React.FC = () => {
             />
           </View>
 
-          <View style={styles.infoPill}>
-            <Ionicons name="compass" size={14} color={IOSColors.systemPurple} />
-            <Text style={styles.infoPillText}>{currentQ.country.continent}</Text>
+          <View style={[styles.infoPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.1)' }]}>
+            <Ionicons name="compass" size={14} color={colors.systemPurple} />
+            <Text style={[styles.infoPillText, { color: colors.systemPurple }]}>{currentQ.country.continent}</Text>
           </View>
         </Animated.View>
 
@@ -1062,29 +1092,52 @@ export const CapitalsGameScreen: React.FC = () => {
             const isTimeout = isAnswered && selectedCapital === null;
             const isEliminated = eliminatedCapitals.includes(cap);
 
-            let cardStyle: any = styles.choiceNormal;
+            let cardStyle: any = {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+            };
             let iconName: keyof typeof Ionicons.glyphMap | null = null;
-            let iconColor = IOSColors.secondaryLabel;
+            let iconColor = colors.secondaryLabel;
 
             if (isEliminated) {
-              cardStyle = styles.choiceEliminated;
+              cardStyle = {
+                backgroundColor: isDark ? 'rgba(255, 59, 48, 0.12)' : 'rgba(255, 59, 48, 0.06)',
+                borderColor: isDark ? 'rgba(255, 59, 48, 0.35)' : 'rgba(255, 59, 48, 0.25)',
+                opacity: 0.65,
+              };
               iconName = 'close-circle';
-              iconColor = IOSColors.systemRed;
+              iconColor = colors.systemRed;
             } else if (isAnswered) {
               if (isTimeout) {
                 if (isCorrect) {
-                  cardStyle = styles.choiceTimeoutReveal;
+                  cardStyle = {
+                    backgroundColor: isDark ? 'rgba(255, 159, 10, 0.18)' : 'rgba(255, 149, 0, 0.08)',
+                    borderColor: colors.systemOrange,
+                    borderWidth: 1.5,
+                  };
                 } else {
-                  cardStyle = styles.choiceDimmed;
+                  cardStyle = {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                    opacity: 0.45,
+                  };
                 }
               } else if (isCorrect) {
-                cardStyle = styles.choiceCorrect;
+                cardStyle = {
+                  backgroundColor: colors.correctCardBackground,
+                  borderColor: colors.systemGreen,
+                  borderWidth: 1.5,
+                };
                 iconName = 'checkmark-circle';
-                iconColor = IOSColors.systemGreen;
+                iconColor = colors.systemGreen;
               } else if (isSelected) {
-                cardStyle = styles.choiceWrong;
+                cardStyle = {
+                  backgroundColor: colors.wrongCardBackground,
+                  borderColor: colors.systemRed,
+                  borderWidth: 1.5,
+                };
                 iconName = 'close-circle';
-                iconColor = IOSColors.systemRed;
+                iconColor = colors.systemRed;
               }
             }
 
@@ -1093,7 +1146,15 @@ export const CapitalsGameScreen: React.FC = () => {
                 key={cap}
                 onPress={() => handleSelectCapital(cap)}
                 disabled={isAnswered || isEliminated}
-                style={[styles.choiceCard, cardStyle]}
+                style={[
+                  styles.choiceCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                  colors.cardShadow,
+                  cardStyle,
+                ]}
               >
                 <View style={styles.choiceRow}>
                   <Ionicons
@@ -1101,27 +1162,28 @@ export const CapitalsGameScreen: React.FC = () => {
                     size={20}
                     color={
                       isEliminated
-                        ? IOSColors.systemRed
+                        ? colors.systemRed
                         : isAnswered && !isTimeout && isCorrect
-                        ? IOSColors.systemGreen
+                        ? colors.systemGreen
                         : isAnswered && isSelected
-                        ? IOSColors.systemRed
+                        ? colors.systemRed
                         : isTimeout && isCorrect
                         ? '#D97706'
                         : isTimeout
-                        ? IOSColors.tertiaryLabel
-                        : IOSColors.systemPurple
+                        ? colors.tertiaryLabel
+                        : colors.systemPurple
                     }
                     style={{ marginRight: 12 }}
                   />
                   <Text
                     style={[
                       styles.choiceText,
+                      { color: colors.label },
                       isEliminated && styles.textEliminated,
-                      isAnswered && !isTimeout && isCorrect && styles.textCorrect,
-                      isAnswered && isSelected && !isCorrect && styles.textWrong,
+                      isAnswered && !isTimeout && isCorrect && { color: colors.systemGreen },
+                      isAnswered && isSelected && !isCorrect && { color: colors.systemRed },
                       isTimeout && isCorrect && styles.textTimeoutReveal,
-                      isTimeout && !isCorrect && styles.textDimmed,
+                      isTimeout && !isCorrect && { color: colors.tertiaryLabel },
                     ]}
                   >
                     {cap}
@@ -1129,7 +1191,7 @@ export const CapitalsGameScreen: React.FC = () => {
                 </View>
                 {isEliminated ? (
                   <View style={styles.eliminatedBadge}>
-                    <Ionicons name="shield" size={11} color={IOSColors.systemRed} />
+                    <Ionicons name="shield" size={11} color={colors.systemRed} />
                     <Text style={styles.eliminatedBadgeText}>Descartada</Text>
                   </View>
                 ) : isTimeout && isCorrect ? (
@@ -1147,12 +1209,12 @@ export const CapitalsGameScreen: React.FC = () => {
 
         {/* Country Fact Sheet */}
         {isAnswered && (
-          <View style={styles.factCard}>
+          <View style={[styles.factCard, { backgroundColor: colors.cardBackground, borderColor: isDark ? 'rgba(175, 82, 222, 0.3)' : 'rgba(175, 82, 222, 0.15)', borderWidth: 1 }, colors.cardShadow]}>
             <View style={styles.factHeader}>
-              <Ionicons name="sparkles" size={16} color={IOSColors.systemPurple} />
-              <Text style={styles.factTitle}>Dato del País</Text>
+              <Ionicons name="sparkles" size={16} color={colors.systemPurple} />
+              <Text style={[styles.factTitle, { color: colors.systemPurple }]}>Dato del País</Text>
             </View>
-            <Text style={styles.factBody}>{currentQ.country.fact}</Text>
+            <Text style={[styles.factBody, { color: colors.label }]}>{currentQ.country.fact}</Text>
           </View>
         )}
 
@@ -1162,6 +1224,11 @@ export const CapitalsGameScreen: React.FC = () => {
             onPress={handleNext}
             style={({ pressed }) => [
               styles.autoAdvanceCard,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: isDark ? 'rgba(175, 82, 222, 0.35)' : 'rgba(175, 82, 222, 0.2)',
+              },
+              colors.cardShadow,
               pressed && { transform: [{ scale: 0.98 }] },
             ]}
           >
@@ -1185,10 +1252,10 @@ export const CapitalsGameScreen: React.FC = () => {
                     size={14}
                     color={
                       selectedCapital === null
-                        ? IOSColors.systemRed
+                        ? colors.systemRed
                         : selectedCapital === currentQ.correctCapital
-                        ? IOSColors.systemGreen
-                        : IOSColors.systemOrange
+                        ? colors.systemGreen
+                        : colors.systemOrange
                     }
                   />
                 </View>
@@ -1196,7 +1263,8 @@ export const CapitalsGameScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.autoAdvanceTitle,
-                      selectedCapital === null && { color: IOSColors.systemRed },
+                      { color: colors.label },
+                      selectedCapital === null && { color: colors.systemRed },
                     ]}
                     numberOfLines={1}
                   >
@@ -1206,20 +1274,20 @@ export const CapitalsGameScreen: React.FC = () => {
                       ? 'Siguiente Capital'
                       : 'Ver Puntuación'}
                   </Text>
-                  <Text style={styles.autoAdvanceSubtitle} numberOfLines={1}>
+                  <Text style={[styles.autoAdvanceSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
                     {selectedCapital === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.skipBtnPill}>
-                <Text style={styles.skipBtnText}>Saltar</Text>
-                <Ionicons name="arrow-forward" size={12} color={IOSColors.systemPurple} style={{ marginLeft: 3 }} />
+              <View style={[styles.skipBtnPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.2)' : 'rgba(175, 82, 222, 0.1)' }]}>
+                <Text style={[styles.skipBtnText, { color: colors.systemPurple }]}>Saltar</Text>
+                <Ionicons name="arrow-forward" size={12} color={colors.systemPurple} style={{ marginLeft: 3 }} />
               </View>
             </View>
 
             {/* Micro timer track */}
-            <View style={styles.countdownTrack}>
+            <View style={[styles.countdownTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
               <Animated.View
                 style={[
                   styles.countdownFill,
@@ -1230,8 +1298,8 @@ export const CapitalsGameScreen: React.FC = () => {
                     }),
                     backgroundColor:
                       selectedCapital === currentQ.correctCapital
-                        ? IOSColors.systemGreen
-                        : IOSColors.systemPurple,
+                        ? colors.systemGreen
+                        : colors.systemPurple,
                   },
                 ]}
               />

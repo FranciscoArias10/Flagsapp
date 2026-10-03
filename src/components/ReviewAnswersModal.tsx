@@ -16,6 +16,8 @@ import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 import { AppleButton } from './AppleButton';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface ReviewAnswersModalProps {
   visible: boolean;
   onClose: () => void;
@@ -36,6 +38,7 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const [filter, setFilter] = useState<FilterType>('all');
+  const { isDark, colors } = useTheme();
 
   const correctCount = items.filter((i) => i.isCorrect).length;
   const wrongCount = items.length - correctCount;
@@ -63,17 +66,17 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? topInset : 12 }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: Platform.OS === 'android' ? topInset : 12 }]}>
         {/* Modal Header */}
         <View style={styles.header}>
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.label }]}>{title}</Text>
+            <Text style={[styles.subtitle, { color: colors.secondaryLabel }]}>
               {correctCount} correctas • {wrongCount} errores
             </Text>
           </View>
           <Pressable onPress={handleClose} hitSlop={12} style={styles.closeBtn}>
-            <Ionicons name="close-circle" size={28} color={IOSColors.secondaryLabel} />
+            <Ionicons name="close-circle" size={28} color={colors.secondaryLabel} />
           </Pressable>
         </View>
 
@@ -132,12 +135,12 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
               <Ionicons
                 name={filter === 'wrong' ? 'trophy' : 'checkmark-done-circle'}
                 size={54}
-                color={filter === 'wrong' ? IOSColors.goldStar : IOSColors.systemGreen}
+                color={filter === 'wrong' ? colors.goldStar : colors.systemGreen}
               />
-              <Text style={styles.emptyTitle}>
+              <Text style={[styles.emptyTitle, { color: colors.label }]}>
                 {filter === 'wrong' ? '¡Ronda Impecable!' : 'No hay elementos'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: colors.secondaryLabel }]}>
                 {filter === 'wrong'
                   ? 'No tuviste ningún fallo en esta ronda. ¡Excelente memoria!'
                   : 'No se encontraron preguntas en esta categoría.'}
@@ -150,14 +153,20 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
                   key={item.id || `${item.countryName}-${index}`}
                   style={[
                     styles.itemCard,
-                    item.isCorrect ? styles.itemCardCorrect : styles.itemCardWrong,
+                    {
+                      backgroundColor: colors.cardBackground,
+                      borderColor: item.isCorrect
+                        ? isDark ? 'rgba(48, 209, 88, 0.4)' : 'rgba(52, 199, 89, 0.25)'
+                        : isDark ? 'rgba(255, 69, 58, 0.4)' : 'rgba(255, 59, 48, 0.25)',
+                    },
+                    colors.cardShadow,
                   ]}
                 >
                   <View style={styles.itemHeader}>
                     <View style={styles.itemLeft}>
                       <Text style={styles.itemFlagEmoji}>{item.flagEmoji}</Text>
                       <View style={styles.itemTextWrap}>
-                        <Text style={styles.itemCountryName} numberOfLines={1}>
+                        <Text style={[styles.itemCountryName, { color: colors.label }]} numberOfLines={1}>
                           {item.countryName}
                         </Text>
                       </View>
@@ -181,28 +190,28 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
                   </View>
 
                   {/* Answers Detail */}
-                  <View style={styles.answersBlock}>
+                  <View style={[styles.answersBlock, { backgroundColor: colors.surface }]}>
                     {item.isCorrect ? (
                       <View style={styles.answerRow}>
-                        <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
-                        <Text style={styles.answerLabel}>Tu respuesta:</Text>
-                        <Text style={[styles.answerValue, { color: IOSColors.systemGreen }]}>
+                        <Ionicons name="checkmark-circle" size={16} color={colors.systemGreen} />
+                        <Text style={[styles.answerLabel, { color: colors.secondaryLabel }]}>Tu respuesta:</Text>
+                        <Text style={[styles.answerValue, { color: colors.systemGreen }]}>
                           {item.correctAnswer}
                         </Text>
                       </View>
                     ) : (
                       <>
                         <View style={styles.answerRow}>
-                          <Ionicons name="close-circle" size={16} color={IOSColors.systemRed} />
-                          <Text style={styles.answerLabel}>Elegiste:</Text>
-                          <Text style={[styles.answerValue, { color: IOSColors.systemRed, textDecorationLine: 'line-through' }]}>
+                          <Ionicons name="close-circle" size={16} color={colors.systemRed} />
+                          <Text style={[styles.answerLabel, { color: colors.secondaryLabel }]}>Elegiste:</Text>
+                          <Text style={[styles.answerValue, { color: colors.systemRed, textDecorationLine: 'line-through' }]}>
                             {item.userAnswer}
                           </Text>
                         </View>
                         <View style={[styles.answerRow, { marginTop: 4 }]}>
-                          <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
-                          <Text style={styles.answerLabel}>Era:</Text>
-                          <Text style={[styles.answerValue, { color: IOSColors.systemGreen, fontWeight: '700' }]}>
+                          <Ionicons name="checkmark-circle" size={16} color={colors.systemGreen} />
+                          <Text style={[styles.answerLabel, { color: colors.secondaryLabel }]}>Era:</Text>
+                          <Text style={[styles.answerValue, { color: colors.systemGreen, fontWeight: '700' }]}>
                             {item.correctAnswer}
                           </Text>
                         </View>
@@ -212,9 +221,9 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
 
                   {/* Curiosity Fact */}
                   {item.fact && (
-                    <View style={styles.factBox}>
-                      <Ionicons name="bulb-outline" size={14} color={IOSColors.systemOrange} style={{ marginTop: 2, marginRight: 6 }} />
-                      <Text style={styles.factText} numberOfLines={2}>
+                    <View style={[styles.factBox, { backgroundColor: isDark ? 'rgba(255, 149, 0, 0.16)' : 'rgba(255, 149, 0, 0.08)' }]}>
+                      <Ionicons name="bulb-outline" size={14} color={colors.systemOrange} style={{ marginTop: 2, marginRight: 6 }} />
+                      <Text style={[styles.factText, { color: colors.label }]} numberOfLines={2}>
                         {item.fact}
                       </Text>
                     </View>

@@ -9,6 +9,8 @@ import {
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface AppleCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
@@ -25,10 +27,12 @@ export const AppleCard: React.FC<AppleCardProps> = ({
   onPress,
   disabled = false,
   shadowLevel = 'small',
-  backgroundColor = IOSColors.secondarySystemBackground,
+  backgroundColor,
   borderRadius = 20,
 }) => {
+  const { colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
+  const activeBg = backgroundColor ?? colors.cardBackground;
 
   const handlePressIn = () => {
     if (!onPress || disabled) return;
@@ -58,8 +62,8 @@ export const AppleCard: React.FC<AppleCardProps> = ({
 
   const getShadowStyle = () => {
     if (shadowLevel === 'none') return null;
-    if (shadowLevel === 'large') return IOSColors.cardShadowLarge;
-    return IOSColors.cardShadow;
+    if (shadowLevel === 'large') return colors.cardShadowLarge;
+    return colors.cardShadow;
   };
 
   if (onPress) {
@@ -72,7 +76,7 @@ export const AppleCard: React.FC<AppleCardProps> = ({
           disabled={disabled}
           style={[
             styles.card,
-            { backgroundColor, borderRadius },
+            { backgroundColor: activeBg, borderRadius, borderColor: colors.cardBorder },
             getShadowStyle(),
             style,
           ]}
@@ -87,7 +91,7 @@ export const AppleCard: React.FC<AppleCardProps> = ({
     <View
       style={[
         styles.card,
-        { backgroundColor, borderRadius },
+        { backgroundColor: activeBg, borderRadius, borderColor: colors.cardBorder },
         getShadowStyle(),
         style,
       ]}
@@ -101,7 +105,6 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: IOSColors.cardBorder,
     overflow: 'hidden',
   },
 });

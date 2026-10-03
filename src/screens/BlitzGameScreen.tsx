@@ -24,6 +24,7 @@ import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface BlitzQuestion {
   target: Country;
@@ -105,6 +106,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const { isDark, colors } = useTheme();
   const hasCountedGameRef = useRef(false);
 
   const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
@@ -390,15 +392,15 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   // 1. DIFFICULTY SELECTION SCREEN
   if (screenMode === 'difficulty_select') {
     return (
-      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         {/* Header with Close */}
         <View style={styles.diffHeaderBar}>
           <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
-            <Ionicons name="close-circle" size={32} color={IOSColors.tertiaryLabel} />
+            <Ionicons name="close-circle" size={32} color={colors.tertiaryLabel} />
           </Pressable>
           <View style={styles.diffHeaderTitleWrap}>
-            <Text style={styles.diffPretitle}>MODO CONTRARRELOJ</Text>
-            <Text style={styles.diffTitle} numberOfLines={1} adjustsFontSizeToFit>
+            <Text style={[styles.diffPretitle, { color: colors.systemOrange }]}>MODO CONTRARRELOJ</Text>
+            <Text style={[styles.diffTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
               Desafío Blitz
             </Text>
           </View>
@@ -410,7 +412,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           contentContainerStyle={[styles.diffScrollContent, { paddingBottom: 40 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.diffSubtitle}>
+          <Text style={[styles.diffSubtitle, { color: colors.secondaryLabel }]}>
             Selecciona tu nivel de adrenalina. Cada acierto suma segundos al reloj, pero cada error te restará tiempo:
           </Text>
 
@@ -429,6 +431,11 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                 }}
                 style={({ pressed }) => [
                   styles.diffCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                  colors.cardShadow,
                   isFeatured && styles.diffCardFeatured,
                   isHard && styles.diffCardHard,
                   pressed && { transform: [{ scale: 0.98 }] },
@@ -451,10 +458,10 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                         {diff.tag}
                       </Text>
                     </View>
-                    <Text style={styles.diffCardTitle} numberOfLines={1} adjustsFontSizeToFit>
+                    <Text style={[styles.diffCardTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
                       {diff.title}
                     </Text>
-                    <Text style={styles.diffCardSubtitle} numberOfLines={1}>
+                    <Text style={[styles.diffCardSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
                       {diff.subtitle}
                     </Text>
                   </View>
@@ -462,21 +469,21 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
                 {/* Rules Pills Row */}
                 <View style={styles.diffPillsRow}>
-                  <View style={styles.diffRulePill}>
+                  <View style={[styles.diffRulePill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' }]}>
                     <Ionicons name="timer-outline" size={14} color={diff.color} />
                     <Text style={[styles.diffRulePillText, { color: diff.color }]}>
                       {diff.seconds}s iniciales
                     </Text>
                   </View>
-                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
-                    <Ionicons name="add-circle-outline" size={14} color={IOSColors.systemGreen} />
-                    <Text style={[styles.diffRulePillText, { color: IOSColors.systemGreen }]}>
+                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(52, 199, 89, 0.12)' }]}>
+                    <Ionicons name="add-circle-outline" size={14} color={colors.systemGreen} />
+                    <Text style={[styles.diffRulePillText, { color: colors.systemGreen }]}>
                       +{diff.bonus}s acierto
                     </Text>
                   </View>
-                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
-                    <Ionicons name="remove-circle-outline" size={14} color={IOSColors.systemRed} />
-                    <Text style={[styles.diffRulePillText, { color: IOSColors.systemRed }]}>
+                  <View style={[styles.diffRulePill, { backgroundColor: 'rgba(255, 59, 48, 0.12)' }]}>
+                    <Ionicons name="remove-circle-outline" size={14} color={colors.systemRed} />
+                    <Text style={[styles.diffRulePillText, { color: colors.systemRed }]}>
                       -{diff.penalty}s fallo
                     </Text>
                   </View>
@@ -484,7 +491,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
                 {/* Bottom CTA bar */}
                 <View style={styles.diffCardBottomBar}>
-                  <Text style={styles.diffCardPlayText}>Toca para comenzar</Text>
+                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>Toca para comenzar</Text>
                   <View style={[styles.diffArrowCircle, { backgroundColor: diff.color }]}>
                     <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
                   </View>
@@ -493,9 +500,9 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             );
           })}
 
-          <View style={styles.diffTipBox}>
-            <Ionicons name="information-circle-outline" size={18} color={IOSColors.secondaryLabel} />
-            <Text style={styles.diffTipText}>
+          <View style={[styles.diffTipBox, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.secondaryLabel} />
+            <Text style={[styles.diffTipText, { color: colors.secondaryLabel }]}>
               En el modo Extremo tienes solo 5 segundos iniciales. ¡Necesitarás reflejos inmediatos de menos de un segundo para sobrevivir!
             </Text>
           </View>
@@ -541,11 +548,11 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
         : '⏱️ Buen Intento';
 
     return (
-      <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+      <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.gameOverWrap}>
-          <Text style={styles.blitzPretitle}>¡TIEMPO AGOTADO!</Text>
-          <Text style={styles.blitzRank}>{rankTitle}</Text>
+          <Text style={[styles.blitzPretitle, { color: colors.systemOrange }]}>¡TIEMPO AGOTADO!</Text>
+          <Text style={[styles.blitzRank, { color: colors.label }]}>{rankTitle}</Text>
 
           {/* Difficulty Badge */}
           <View
@@ -569,6 +576,12 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             }}
             style={({ pressed }) => [
               styles.scoreCircle,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+                borderWidth: 1,
+              },
+              colors.cardShadow,
               pressed && { transform: [{ scale: 0.95 }] },
             ]}
           >
@@ -576,18 +589,18 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
               <Ionicons name="eye" size={11} color="#FFFFFF" />
               <Text style={styles.reviewBadgeHintText}>VER</Text>
             </View>
-            <Text style={styles.bigScore}>{score}</Text>
-            <Text style={styles.bigScoreLabel}>Aciertos 👆</Text>
+            <Text style={[styles.bigScore, { color: colors.label }]}>{score}</Text>
+            <Text style={[styles.bigScoreLabel, { color: colors.systemBlue }]}>Aciertos 👆</Text>
           </Pressable>
 
           <View style={styles.statCardsGrid}>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={styles.statLabel}>Mejor Racha</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: IOSColors.systemPurple }]}>+{score * 35}</Text>
-              <Text style={styles.statLabel}>XP Total</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
+              <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{score * 35}</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Total</Text>
             </View>
           </View>
 
@@ -620,7 +633,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                 pressed && { opacity: 0.7 },
               ]}
             >
-              <Text style={styles.exitLinkBtnText}>Volver al Menú</Text>
+              <Text style={[styles.exitLinkBtnText, { color: colors.secondaryLabel }]}>Volver al Menú</Text>
             </Pressable>
           </View>
         </View>
@@ -662,17 +675,18 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
+    <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
       {/* Top Blitz Header */}
       <View style={styles.blitzTopHeader}>
         <Pressable onPress={handleClosePlaying} style={styles.closeBtn} hitSlop={12}>
-          <Ionicons name="close-circle" size={30} color={IOSColors.tertiaryLabel} />
+          <Ionicons name="close-circle" size={30} color={colors.tertiaryLabel} />
         </Pressable>
 
         {/* Central Timer */}
         <Animated.View
           style={[
             styles.timerPill,
+            { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' },
             isLowTime && styles.timerPillUrgent,
             { transform: [{ scale: timerScale }] },
           ]}
@@ -680,9 +694,9 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           <Ionicons
             name="timer"
             size={18}
-            color={isLowTime ? '#FF3B30' : IOSColors.systemBlue}
+            color={isLowTime ? '#FF3B30' : colors.systemBlue}
           />
-          <Text style={[styles.timerText, isLowTime && styles.timerTextUrgent]}>
+          <Text style={[styles.timerText, { color: isLowTime ? '#FF3B30' : colors.systemBlue }, isLowTime && styles.timerTextUrgent]}>
             {timeLeft}s
           </Text>
         </Animated.View>
@@ -696,8 +710,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             </View>
           )}
           <StreakBadge streak={streak} size="small" />
-          <View style={styles.scorePill}>
-            <Text style={styles.scorePillText}>
+          <View style={[styles.scorePill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+            <Text style={[styles.scorePillText, { color: colors.label }]}>
               pts: {score}{selectedQuestionCount !== 'all' ? ` (${Math.min(reviewItems.length + 1, selectedQuestionCount)}/${selectedQuestionCount})` : ''}
             </Text>
           </View>
@@ -735,8 +749,19 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       )}
 
       {/* Flag Card */}
-      <Animated.View style={[styles.flagCard, { transform: [{ scale: cardScale }] }]}>
-        <Text style={styles.prompt}>Identifica rápido:</Text>
+      <Animated.View
+        style={[
+          styles.flagCard,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: colors.cardBorder,
+            borderWidth: 1,
+            transform: [{ scale: cardScale }],
+          },
+          colors.cardShadow,
+        ]}
+      >
+        <Text style={[styles.prompt, { color: colors.secondaryLabel }]}>Identifica rápido:</Text>
         <FlagImage
           countryCode={currentQ.target.code}
           fallbackEmoji={currentQ.target.flagEmoji}
@@ -744,7 +769,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           height={150}
           borderRadius={20}
         />
-        <Text style={styles.continentHint}>{currentQ.target.continent}</Text>
+        <Text style={[styles.continentHint, { color: colors.tertiaryLabel }]}>{currentQ.target.continent}</Text>
       </Animated.View>
 
       {/* 4 Quick Options */}
@@ -754,12 +779,28 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           const isCorrect = idx === currentQ.correctIndex;
           const isEliminated = eliminatedOptionIdx === idx;
 
-          let optionStyle = styles.optBase;
+          let optionStyle: any = {
+            backgroundColor: colors.cardBackground,
+            borderColor: colors.cardBorder,
+          };
           if (isEliminated) {
-            optionStyle = styles.optEliminated;
+            optionStyle = {
+              backgroundColor: isDark ? 'rgba(255, 59, 48, 0.12)' : 'rgba(255, 59, 48, 0.06)',
+              borderColor: isDark ? 'rgba(255, 59, 48, 0.35)' : 'rgba(255, 59, 48, 0.25)',
+              opacity: 0.65,
+            };
           } else if (isAnswered) {
-            if (isCorrect) optionStyle = styles.optCorrect;
-            else if (isSelected) optionStyle = styles.optWrong;
+            if (isCorrect) {
+              optionStyle = {
+                backgroundColor: colors.systemGreen,
+                borderColor: colors.systemGreen,
+              };
+            } else if (isSelected) {
+              optionStyle = {
+                backgroundColor: colors.systemRed,
+                borderColor: colors.systemRed,
+              };
+            }
           }
 
           return (
@@ -767,11 +808,20 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
               key={option.code}
               onPress={() => handleSelectOption(idx)}
               disabled={isAnswered || isEliminated}
-              style={[styles.optButton, optionStyle]}
+              style={[
+                styles.optButton,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+                colors.cardShadow,
+                optionStyle,
+              ]}
             >
               <Text
                 style={[
                   styles.optText,
+                  { color: colors.label },
                   isEliminated && styles.optTextEliminated,
                   isAnswered && isCorrect && styles.optTextCorrect,
                   isAnswered && isSelected && !isCorrect && styles.optTextWrong,
@@ -780,7 +830,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                 {option.name}
               </Text>
               {isEliminated ? (
-                <Ionicons name="shield" size={16} color={IOSColors.systemRed} />
+                <Ionicons name="shield" size={16} color={colors.systemRed} />
               ) : isAnswered && isCorrect ? (
                 <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
               ) : isAnswered && isSelected ? (
