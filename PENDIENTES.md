@@ -18,8 +18,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
   - Filtrar países por dificultad (Fácil, Intermedio, Experto).
 
 ### 🎨 Audio y Experiencia de Usuario (UI/UX)
-- [ ] **Efectos de Sonido Reales**:
-  - Implementar efectos de audio sintetizados o empaquetados para aciertos, errores, combos y final de partida junto al sistema de vibraciones hápticas.
 - [ ] **Modo Oscuro Completo (Dark Mode)**:
   - Sincronización del tema oscuro del sistema para jugar en entornos nocturnos.
 
@@ -34,6 +32,10 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Efectos de Sonido Reales (Audio SFX + Hápticos Sincronizados)**:
+  - Integración nativa con `expo-audio` compatible con Expo SDK 57 / React 19.
+  - Generación de 7 efectos de audio 16-bit 44.1kHz WAV: acierto celestial, error de tono bajo, tap táctil sutil, racha ascendente de combo, escudo salvavidas cristalino, fanfarria de celebración y tic-tac de cuenta regresiva.
+  - Sincronización integral en `SoundService` con el sistema de respuesta háptica e integración en Quiz, Capitales, Blitz y Perfil, respetando las preferencias de usuario.
 - [x] **Auditoría y Optimización Responsive Integral en Todos los Dispositivos**:
   - Reestructuración de la tarjeta "Modo Global" con botón de acción destacado `[Jugar ▶]` inmune a recortes por ancho de pantalla.
   - Insignias interactivas "Jugar" en las tarjetas de continentes y prevención de desbordamiento horizontal en pantallas estrechas.
