@@ -17,10 +17,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto).
 
-### 🎨 Audio y Experiencia de Usuario (UI/UX)
-- [ ] **Modo Oscuro Completo (Dark Mode)**:
-  - Sincronización del tema oscuro del sistema para jugar en entornos nocturnos.
-
 ### 🌐 Internacionalización y Soporte Multi-idioma (i18n)
 - [ ] **Soporte de Idioma Inglés y Detección Automática**:
   - Detectar el idioma del dispositivo mediante `expo-localization`.
@@ -32,6 +28,11 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Modo Oscuro Completo (Dark Mode con Sincronización de Sistema y Selector Manual)**:
+  - Paleta semántica OLED de alto contraste (fondo `#000000`, tarjetas elevadas `#1C1C1E`, bordes sutiles y textos dinámicos).
+  - Contexto centralizado `ThemeContext` con persistencia en AsyncStorage (`@flagspp_theme_preference_v1`).
+  - Detección reactiva del tema nativo del sistema (`useColorScheme`) y control manual en Perfil (📱 Sistema / ☀️ Claro / 🌙 Oscuro).
+  - Adaptación completa de todas las pantallas y modales: Play, Quiz de Banderas, Capitales, Desafío Blitz, Atlas, Perfil, TabBar translúcido con blur dinámico, Modales de inicio y Recuentos de repaso.
 - [x] **Efectos de Sonido Reales (Audio SFX + Hápticos Sincronizados)**:
   - Integración nativa con `expo-audio` compatible con Expo SDK 57 / React 19.
   - Generación de 7 efectos de audio 16-bit 44.1kHz WAV: acierto celestial, error de tono bajo, tap táctil sutil, racha ascendente de combo, escudo salvavidas cristalino, fanfarria de celebración y tic-tac de cuenta regresiva.
