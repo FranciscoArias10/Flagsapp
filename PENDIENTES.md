@@ -6,16 +6,12 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
-- [ ] **Modo Estudio / Quiz desde el Atlas**:
-  - En la ficha detallada de cada país en el Atlas, botón de *"Poner a prueba este país"* para abrir una micro-pregunta sobre su bandera y capital.
+- [ ] **Filtro por Dificultad en el Atlas**:
+  - Filtrar países por dificultad (Fácil, Intermedio, Experto) mediante chips interactivos en el Atlas.
 
 ---
 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
-
-### 🎮 Experiencia de Juego (Gameplay)
-- [ ] **Filtro por Dificultad en el Atlas**:
-  - Filtrar países por dificultad (Fácil, Intermedio, Experto).
 
 ### 🌐 Internacionalización y Soporte Multi-idioma (i18n)
 - [ ] **Soporte de Idioma Inglés y Detección Automática**:
@@ -28,6 +24,14 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Modo Estudio / Quiz desde el Atlas (Micro-Desafío por País)**:
+  - Botón interactivo *"🎯 Poner a prueba este país"* en la tarjeta de detalle de cada país en el Atlas.
+  - Modal interactivo de estudio (`CountryStudyModal`) con flujo de 2 preguntas rápidas:
+    1. Pregunta de Capital con 4 opciones (distractores de ciudades del mismo país o capitales del mismo continente).
+    2. Pregunta de Bandera con cuadrícula 2x2 de banderas de países del mismo continente.
+  - Animaciones fluidas, retroalimentación táctil y efectos de sonido en tiempo real (`soundService.triggerSuccess` y `soundService.triggerError`).
+  - Pantalla de resultados con puntuación, estrellas, animación de confeti en caso de dominio perfecto, ganancia de XP registrada en el perfil y tarjeta de repaso del dato curioso.
+  - Botón para reintentar la práctica inmediata o volver al Atlas sin perder la posición de scroll.
 - [x] **Modo Oscuro Completo (Dark Mode con Sincronización de Sistema y Selector Manual)**:
   - Paleta semántica OLED de alto contraste (fondo `#000000`, tarjetas elevadas `#1C1C1E`, bordes sutiles y textos dinámicos).
   - Contexto centralizado `ThemeContext` con persistencia en AsyncStorage (`@flagspp_theme_preference_v1`).
