@@ -20,6 +20,7 @@ import { soundService } from '../utils/soundHelper';
 import { FlagImage } from '../components/FlagImage';
 import { AppleHeader } from '../components/AppleHeader';
 import { AppleButton } from '../components/AppleButton';
+import { CountryStudyModal } from '../components/CountryStudyModal';
 import { useTheme } from '../context/ThemeContext';
 
 export const AtlasScreen: React.FC = () => {
@@ -29,6 +30,7 @@ export const AtlasScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [studyCountry, setStudyCountry] = useState<Country | null>(null);
 
   const continentFilters = ['Todos', ...CONTINENTS.map((c) => c.name)];
 
@@ -229,16 +231,61 @@ export const AtlasScreen: React.FC = () => {
                 <Text style={[styles.factBodyText, { color: colors.label }]}>{selectedCountry.fact}</Text>
               </View>
 
+              {/* Study & Test Country Card */}
+              <View
+                style={[
+                  styles.studyActionCard,
+                  {
+                    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)',
+                    borderColor: isDark ? 'rgba(0, 122, 255, 0.3)' : 'rgba(0, 122, 255, 0.2)',
+                  },
+                ]}
+              >
+                <View style={styles.studyActionHeader}>
+                  <View style={[styles.studyIconWrap, { backgroundColor: colors.systemBlue }]}>
+                    <Ionicons name="school" size={20} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.studyActionTextWrap}>
+                    <Text style={[styles.studyActionTitle, { color: colors.label }]}>
+                      ¿Listo para el desafío?
+                    </Text>
+                    <Text style={[styles.studyActionSubtitle, { color: colors.secondaryLabel }]}>
+                      Pon a prueba tu conocimiento de la bandera y capital de {selectedCountry.name}.
+                    </Text>
+                  </View>
+                </View>
+
+                <AppleButton
+                  title="🎯 Poner a prueba este país"
+                  variant="primary"
+                  onPress={() => {
+                    const countryToStudy = selectedCountry;
+                    setSelectedCountry(null);
+                    setTimeout(() => {
+                      setStudyCountry(countryToStudy);
+                    }, 280);
+                  }}
+                  style={{ marginTop: 14, width: '100%' }}
+                />
+              </View>
+
               <AppleButton
                 title="Listo"
                 onPress={() => setSelectedCountry(null)}
                 variant="secondary"
-                style={{ marginTop: 24, width: '100%' }}
+                style={{ marginTop: 18, width: '100%' }}
               />
             </ScrollView>
           </View>
         )}
       </Modal>
+
+      {/* Country Study Micro-Quiz Modal */}
+      <CountryStudyModal
+        visible={!!studyCountry}
+        country={studyCountry}
+        onClose={() => setStudyCountry(null)}
+      />
     </View>
   );
 };
@@ -472,5 +519,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: IOSColors.label,
     lineHeight: 20,
+  },
+  studyActionCard: {
+    width: '100%',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  studyActionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  studyIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  studyActionTextWrap: {
+    flex: 1,
+  },
+  studyActionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  studyActionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
