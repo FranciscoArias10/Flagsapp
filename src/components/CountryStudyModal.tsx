@@ -23,6 +23,7 @@ import { AppleButton } from './AppleButton';
 import { ConfettiView } from './ConfettiView';
 import { useTheme } from '../context/ThemeContext';
 import { useGame } from '../context/GameContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -43,6 +44,7 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 10);
   const { isDark, colors } = useTheme();
   const { recordAnswer, recordQuizResult } = useGame();
+  const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
 
   const [step, setStep] = useState<StudyStep>('capital');
   const [correctCount, setCorrectCount] = useState(0);
@@ -110,8 +112,8 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
     setIsFlagAnswered(false);
     setShowConfetti(false);
 
-    // 1. Generate Capital Options
-    const correctCap = targetCountry.capital;
+    // 1. Generate Capital Options (localized)
+    const correctCap = getCapitalName(targetCountry.code, targetCountry.capital);
     const sameCountryCities = (COUNTRY_CITIES[targetCountry.code] || []).filter(
       (c) => c.toLowerCase() !== correctCap.toLowerCase()
     );
@@ -124,11 +126,11 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
       // Pick capitals from other countries (prefer same continent)
       const sameContinentCapitals = COUNTRIES.filter(
         (c) => c.code !== targetCountry.code && c.continent === targetCountry.continent
-      ).map((c) => c.capital);
+      ).map((c) => getCapitalName(c.code, c.capital));
 
       const otherContinentCapitals = COUNTRIES.filter(
         (c) => c.code !== targetCountry.code && c.continent !== targetCountry.continent
-      ).map((c) => c.capital);
+      ).map((c) => getCapitalName(c.code, c.capital));
 
       const combinedPool = [...sameContinentCapitals, ...otherContinentCapitals];
       const shuffledCombined = combinedPool.sort(() => Math.random() - 0.5);
@@ -170,7 +172,8 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
     setIsCapitalAnswered(true);
     setSelectedCapital(chosenCapital);
 
-    const isCorrect = chosenCapital === country.capital;
+    const correctCap = getCapitalName(country.code, country.capital);
+    const isCorrect = chosenCapital === correctCap;
     if (isCorrect) {
       soundService.triggerSuccess();
       setCorrectCount((prev) => prev + 1);
@@ -257,7 +260,7 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
             <View style={styles.modeBadge}>
               <Ionicons name="school" size={13} color={colors.systemBlue} />
               <Text style={[styles.modeBadgeText, { color: colors.systemBlue }]}>
-                MODO ESTUDIO
+                {t('study_badge')}
               </Text>
             </View>
 
@@ -303,10 +306,10 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
               ]}
             >
               <Text style={[styles.stepSubtitle, { color: colors.secondaryLabel }]}>
-                PASO 1 DE 2 • CAPITAL
+                {t('study_step_1')}
               </Text>
               <Text style={[styles.questionTitle, { color: colors.label }]}>
-                ¿Cuál es la capital de {country.name}?
+                {t('study_capital_question', { country: getCountryName(country.code, country.name) })}
               </Text>
 
               <View
@@ -330,7 +333,7 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
                 <View style={styles.continentPill}>
                   <Ionicons name="location-sharp" size={13} color={colors.systemBlue} />
                   <Text style={[styles.continentPillText, { color: colors.systemBlue }]}>
-                    {country.continent}
+                    {getContinentName(country.continent)}
                   </Text>
                 </View>
               </View>
@@ -427,16 +430,16 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
               ]}
             >
               <Text style={[styles.stepSubtitle, { color: colors.secondaryLabel }]}>
-                PASO 2 DE 2 • BANDERA
+                {t('study_step_2')}
               </Text>
               <Text style={[styles.questionTitle, { color: colors.label }]}>
-                ¿Cuál es la bandera de {country.name}?
+                {t('study_flag_question', { country: getCountryName(country.code, country.name) })}
               </Text>
 
               <View style={styles.hintBanner}>
                 <Ionicons name="information-circle" size={16} color={colors.systemBlue} />
                 <Text style={[styles.hintText, { color: colors.secondaryLabel }]}>
-                  Capital: <Text style={{ fontWeight: '700', color: colors.label }}>{country.capital}</Text> • {country.continent}
+                  {t('atlas_detail_capital')}: <Text style={{ fontWeight: '700', color: colors.label }}>{getCapitalName(country.code, country.capital)}</Text> • {getContinentName(country.continent)}
                 </Text>
               </View>
 
@@ -534,14 +537,14 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
               </View>
 
               <Text style={[styles.resultsPretitle, { color: colors.systemBlue }]}>
-                PRUEBA COMPLETADA
+                {t('study_results_complete')}
               </Text>
               <Text style={[styles.resultsTitle, { color: colors.label }]}>
                 {correctCount === 2
-                  ? `¡${country.name} Dominado!`
+                  ? t('study_results_mastered', { country: getCountryName(country.code, country.name) })
                   : correctCount === 1
-                  ? '¡Buen Intento!'
-                  : '¡Sigue Practicando!'}
+                  ? t('study_results_good_try')
+                  : t('study_results_keep_practicing')}
               </Text>
 
               {/* Stats Box */}
@@ -561,7 +564,7 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
                     {correctCount} / 2
                   </Text>
                   <Text style={[styles.resultsStatLbl, { color: colors.secondaryLabel }]}>
-                    Aciertos
+                    {t('study_results_corrects')}
                   </Text>
                 </View>
 
@@ -580,7 +583,7 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
                     +{correctCount === 2 ? 30 : correctCount === 1 ? 15 : 5}
                   </Text>
                   <Text style={[styles.resultsStatLbl, { color: colors.secondaryLabel }]}>
-                    XP Ganada
+                    {t('study_results_xp_earned')}
                   </Text>
                 </View>
               </View>
@@ -600,18 +603,18 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
                 <View style={styles.reviewFactHead}>
                   <Ionicons name="bulb" size={18} color={colors.systemOrange} />
                   <Text style={[styles.reviewFactTitle, { color: colors.systemOrange }]}>
-                    Ficha de Repaso: {country.name}
+                    {t('study_results_review_sheet', { country: getCountryName(country.code, country.name) })}
                   </Text>
                 </View>
                 <Text style={[styles.reviewFactBody, { color: colors.label }]}>
-                  {country.fact}
+                  {getCountryFact(country.code, country.fact)}
                 </Text>
                 <View style={styles.reviewMetaRow}>
                   <Text style={[styles.reviewMetaText, { color: colors.secondaryLabel }]}>
-                    Capital: <Text style={{ fontWeight: '700', color: colors.label }}>{country.capital}</Text>
+                    {t('atlas_detail_capital')}: <Text style={{ fontWeight: '700', color: colors.label }}>{getCapitalName(country.code, country.capital)}</Text>
                   </Text>
                   <Text style={[styles.reviewMetaText, { color: colors.secondaryLabel }]}>
-                    Población: {country.population}
+                    {t('atlas_detail_population')}: {country.population}
                   </Text>
                 </View>
               </View>
@@ -619,13 +622,13 @@ export const CountryStudyModal: React.FC<CountryStudyModalProps> = ({
               {/* Actions */}
               <View style={styles.resultsActions}>
                 <AppleButton
-                  title="🔁 Practicar de Nuevo"
+                  title={t('study_btn_practice_again')}
                   variant="gradient"
                   onPress={() => initStudySession(country)}
                   style={{ width: '100%', marginBottom: 10 }}
                 />
                 <AppleButton
-                  title="Volver al Atlas"
+                  title={t('study_btn_back_atlas')}
                   variant="secondary"
                   onPress={onClose}
                   style={{ width: '100%' }}

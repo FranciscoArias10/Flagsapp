@@ -8,6 +8,7 @@ import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AppleTabBarProps {
   currentTab: TabType;
@@ -16,7 +17,8 @@ interface AppleTabBarProps {
 
 interface TabItem {
   id: TabType;
-  label: string;
+  labelEs: string;
+  labelEn: string;
   iconActive: keyof typeof Ionicons.glyphMap;
   iconInactive: keyof typeof Ionicons.glyphMap;
 }
@@ -24,25 +26,29 @@ interface TabItem {
 const TABS: TabItem[] = [
   {
     id: 'play',
-    label: 'Banderas',
+    labelEs: 'Banderas',
+    labelEn: 'Flags',
     iconActive: 'flag',
     iconInactive: 'flag-outline',
   },
   {
     id: 'capitals',
-    label: 'Capitales',
+    labelEs: 'Capitales',
+    labelEn: 'Capitals',
     iconActive: 'business',
     iconInactive: 'business-outline',
   },
   {
     id: 'atlas',
-    label: 'Atlas',
+    labelEs: 'Atlas',
+    labelEn: 'Atlas',
     iconActive: 'earth',
     iconInactive: 'earth-outline',
   },
   {
     id: 'profile',
-    label: 'Perfil',
+    labelEs: 'Perfil',
+    labelEn: 'Profile',
     iconActive: 'trophy',
     iconInactive: 'trophy-outline',
   },
@@ -51,6 +57,7 @@ const TABS: TabItem[] = [
 export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChange }) => {
   const insets = useSafeAreaInsets();
   const { isDark, colors } = useTheme();
+  const { language } = useLanguage();
 
   const handlePress = (tab: TabType) => {
     if (tab !== currentTab) {
@@ -63,6 +70,7 @@ export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChang
     <View style={[styles.tabBarInner, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {TABS.map((tab) => {
         const isActive = currentTab === tab.id;
+        const label = language === 'en' ? tab.labelEn : tab.labelEs;
         return (
           <Pressable
             key={tab.id}
@@ -84,7 +92,7 @@ export const AppleTabBar: React.FC<AppleTabBarProps> = ({ currentTab, onTabChang
                 isActive && styles.tabLabelActive,
               ]}
             >
-              {tab.label}
+              {label}
             </Text>
           </Pressable>
         );

@@ -22,11 +22,13 @@ import { AppleHeader } from '../components/AppleHeader';
 import { AppleButton } from '../components/AppleButton';
 import { CountryStudyModal } from '../components/CountryStudyModal';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export const AtlasScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { isDark, colors } = useTheme();
+  const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -35,15 +37,25 @@ export const AtlasScreen: React.FC = () => {
   const continentFilters = ['Todos', ...CONTINENTS.map((c) => c.name)];
 
   const filteredCountries = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
     return COUNTRIES.filter((country) => {
+      const translatedName = getCountryName(country.code, country.name).toLowerCase();
+      const translatedCap = getCapitalName(country.code, country.capital).toLowerCase();
+      const spanishName = country.name.toLowerCase();
+      const spanishCap = country.capital.toLowerCase();
+
       const matchesSearch =
-        country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        country.capital.toLowerCase().includes(searchQuery.toLowerCase());
+        !query ||
+        translatedName.includes(query) ||
+        translatedCap.includes(query) ||
+        spanishName.includes(query) ||
+        spanishCap.includes(query);
+
       const matchesContinent =
         selectedContinent === 'Todos' || country.continent === selectedContinent;
       return matchesSearch && matchesContinent;
     });
-  }, [searchQuery, selectedContinent]);
+  }, [searchQuery, selectedContinent, getCountryName, getCapitalName]);
 
   const handleSelectCountry = (country: Country) => {
     soundService.triggerLightTap();
@@ -80,12 +92,18 @@ export const AtlasScreen: React.FC = () => {
       </View>
 
       <View style={styles.countryInfo}>
-        <Text style={[styles.countryName, { color: colors.label }]}>{item.name}</Text>
+        <Text style={[styles.countryName, { color: colors.label }]}>
+          {getCountryName(item.code, item.name)}
+        </Text>
         <View style={styles.detailRow}>
           <Ionicons name="business-outline" size={13} color={colors.secondaryLabel} />
-          <Text style={[styles.capitalText, { color: colors.secondaryLabel }]}>{item.capital}</Text>
+          <Text style={[styles.capitalText, { color: colors.secondaryLabel }]}>
+            {getCapitalName(item.code, item.capital)}
+          </Text>
         </View>
-        <Text style={[styles.continentText, { color: colors.systemBlue }]}>{item.continent}</Text>
+        <Text style={[styles.continentText, { color: colors.systemBlue }]}>
+          {getContinentName(item.continent)}
+        </Text>
       </View>
 
       <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} />
@@ -95,11 +113,13 @@ export const AtlasScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       <AppleHeader
-        title="Atlas"
-        category="BIBLIOTECA"
+        title={t('atlas_title')}
+        category={t('header_category_library')}
         rightAccessory={
           <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{filteredCountries.length} países</Text>
+            <Text style={styles.countBadgeText}>
+              {filteredCountries.length} {t('countries_count')}
+            </Text>
           </View>
         }
       />
@@ -111,7 +131,7 @@ export const AtlasScreen: React.FC = () => {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Buscar país o capital..."
+            placeholder={t('atlas_search_placeholder')}
             placeholderTextColor={colors.tertiaryLabel}
             style={[styles.searchInput, { color: colors.label }]}
             clearButtonMode="while-editing"
@@ -151,7 +171,7 @@ export const AtlasScreen: React.FC = () => {
                     isActive && styles.chipTextActive,
                   ]}
                 >
-                  {filter}
+                  {getContinentName(filter)}
                 </Text>
               </Pressable>
             );
@@ -170,8 +190,12 @@ export const AtlasScreen: React.FC = () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="earth" size={48} color={colors.tertiaryLabel} />
-            <Text style={[styles.emptyTitle, { color: colors.label }]}>No se encontraron países</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.secondaryLabel }]}>Prueba con otro término de búsqueda</Text>
+            <Text style={[styles.emptyTitle, { color: colors.label }]}>
+              {t('atlas_empty_title')}
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.secondaryLabel }]}>
+              {t('atlas_empty_subtitle')}
+            </Text>
           </View>
         }
       />
@@ -207,28 +231,42 @@ export const AtlasScreen: React.FC = () => {
                 />
               </View>
 
-              <Text style={[styles.modalCountryName, { color: colors.label }]}>{selectedCountry.name}</Text>
-              <Text style={[styles.modalContinent, { color: colors.systemBlue }]}>{selectedCountry.continent.toUpperCase()}</Text>
+              <Text style={[styles.modalCountryName, { color: colors.label }]}>
+                {getCountryName(selectedCountry.code, selectedCountry.name)}
+              </Text>
+              <Text style={[styles.modalContinent, { color: colors.systemBlue }]}>
+                {getContinentName(selectedCountry.continent).toUpperCase()}
+              </Text>
 
               <View style={styles.infoCardsRow}>
                 <View style={[styles.infoBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
                   <Ionicons name="business" size={20} color={colors.systemPurple} />
-                  <Text style={[styles.infoBoxVal, { color: colors.label }]}>{selectedCountry.capital}</Text>
-                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>Capital</Text>
+                  <Text style={[styles.infoBoxVal, { color: colors.label }]}>
+                    {getCapitalName(selectedCountry.code, selectedCountry.capital)}
+                  </Text>
+                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>
+                    {t('atlas_detail_capital')}
+                  </Text>
                 </View>
                 <View style={[styles.infoBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
                   <Ionicons name="people" size={20} color={colors.systemBlue} />
                   <Text style={[styles.infoBoxVal, { color: colors.label }]}>{selectedCountry.population}</Text>
-                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>Población</Text>
+                  <Text style={[styles.infoBoxLbl, { color: colors.secondaryLabel }]}>
+                    {t('atlas_detail_population')}
+                  </Text>
                 </View>
               </View>
 
               <View style={[styles.modalFactBox, { backgroundColor: isDark ? 'rgba(255, 149, 0, 0.16)' : 'rgba(255, 149, 0, 0.08)', borderColor: isDark ? 'rgba(255, 149, 0, 0.3)' : 'rgba(255, 149, 0, 0.2)' }]}>
                 <View style={styles.factHead}>
                   <Ionicons name="bulb" size={20} color={colors.systemOrange} />
-                  <Text style={[styles.factHeadText, { color: colors.systemOrange }]}>Dato Curioso</Text>
+                  <Text style={[styles.factHeadText, { color: colors.systemOrange }]}>
+                    {t('atlas_detail_fact_title')}
+                  </Text>
                 </View>
-                <Text style={[styles.factBodyText, { color: colors.label }]}>{selectedCountry.fact}</Text>
+                <Text style={[styles.factBodyText, { color: colors.label }]}>
+                  {getCountryFact(selectedCountry.code, selectedCountry.fact)}
+                </Text>
               </View>
 
               {/* Study & Test Country Card */}
@@ -247,16 +285,16 @@ export const AtlasScreen: React.FC = () => {
                   </View>
                   <View style={styles.studyActionTextWrap}>
                     <Text style={[styles.studyActionTitle, { color: colors.label }]}>
-                      ¿Listo para el desafío?
+                      {t('atlas_study_card_title')}
                     </Text>
                     <Text style={[styles.studyActionSubtitle, { color: colors.secondaryLabel }]}>
-                      Pon a prueba tu conocimiento de la bandera y capital de {selectedCountry.name}.
+                      {t('atlas_study_card_subtitle', { country: getCountryName(selectedCountry.code, selectedCountry.name) })}
                     </Text>
                   </View>
                 </View>
 
                 <AppleButton
-                  title="🎯 Poner a prueba este país"
+                  title={t('atlas_detail_btn_study')}
                   variant="primary"
                   onPress={() => {
                     const countryToStudy = selectedCountry;
@@ -270,7 +308,7 @@ export const AtlasScreen: React.FC = () => {
               </View>
 
               <AppleButton
-                title="Listo"
+                title={t('atlas_detail_btn_done')}
                 onPress={() => setSelectedCountry(null)}
                 variant="secondary"
                 style={{ marginTop: 18, width: '100%' }}
