@@ -27,6 +27,7 @@ import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export type CapitalDifficulty = 'easy' | 'medium' | 'hard' | 'all';
 
@@ -132,7 +133,19 @@ export const CapitalsGameScreen: React.FC = () => {
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
   const { isDark, colors } = useTheme();
+  const { t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
+
+  const getDiffConfig = (diff: CapitalDifficultyConfig): CapitalDifficultyConfig => {
+    return {
+      ...diff,
+      title: t(`capitals_${diff.key}_title` as any),
+      shortName: t(`capitals_${diff.key}_short` as any),
+      subtitle: t(`capitals_${diff.key}_subtitle` as any),
+      description: t(`capitals_${diff.key}_desc` as any),
+      tag: t(`capitals_${diff.key}_tag` as any),
+    };
+  };
 
   const [screenMode, setScreenMode] = useState<'difficulty_select' | 'playing'>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<CapitalDifficulty>('easy');
@@ -266,6 +279,7 @@ export const CapitalsGameScreen: React.FC = () => {
     selected.forEach((c) => askedSet.add(c.code));
 
     return selected.map((country) => {
+      const localizedCorrectCapital = getCapitalName(country);
       // 1. Same-country real cities (e.g. Guayaquil, Machala, Cuenca for Ecuador)
       const sameCountryCities = (COUNTRY_CITIES[country.code] || [])
         .filter((cityName) => cityName.toLowerCase().trim() !== country.capital.toLowerCase().trim());
@@ -278,18 +292,18 @@ export const CapitalsGameScreen: React.FC = () => {
         const fallbackCities = [...sameCountryCities];
         const sameContinentCapitals = pool
           .filter((c) => c.capital !== country.capital && !fallbackCities.includes(c.capital))
-          .map((c) => c.capital);
+          .map((c) => getCapitalName(c));
         const extraNeeded = 3 - fallbackCities.length;
         const extraCapitals = shuffleArray(sameContinentCapitals).slice(0, extraNeeded);
         distractors = [...fallbackCities, ...extraCapitals];
       }
 
-      const options = shuffleArray([country.capital, ...distractors]);
+      const options = shuffleArray([localizedCorrectCapital, ...distractors]);
 
       return {
         country,
         options,
-        correctCapital: country.capital,
+        correctCapital: localizedCorrectCapital,
       };
     });
   };
@@ -351,6 +365,7 @@ export const CapitalsGameScreen: React.FC = () => {
     const failedCountries = COUNTRIES.filter((c) => failedCodes.includes(c.code));
 
     const retryQs: CapitalQuestion[] = failedCountries.map((country) => {
+      const localizedCorrectCapital = getCapitalName(country);
       const sameCountryCities = (COUNTRY_CITIES[country.code] || [])
         .filter((cityName) => cityName.toLowerCase().trim() !== country.capital.toLowerCase().trim());
 
@@ -361,17 +376,17 @@ export const CapitalsGameScreen: React.FC = () => {
         const fallbackCities = [...sameCountryCities];
         const otherCapitals = COUNTRIES
           .filter((c) => c.capital !== country.capital && !fallbackCities.includes(c.capital))
-          .map((c) => c.capital);
+          .map((c) => getCapitalName(c));
         const extraNeeded = 3 - fallbackCities.length;
         const extraCapitals = shuffleArray(otherCapitals).slice(0, extraNeeded);
         distractors = [...fallbackCities, ...extraCapitals];
       }
 
-      const options = shuffleArray([country.capital, ...distractors]);
+      const options = shuffleArray([localizedCorrectCapital, ...distractors]);
       return {
         country,
         options,
-        correctCapital: country.capital,
+        correctCapital: localizedCorrectCapital,
       };
     });
 
@@ -397,7 +412,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const handleStartWithDifficulty = (diffKey: CapitalDifficulty) => {
     soundService.triggerMediumTap();
-    setPendingDifficulty(CAPITALS_DIFFICULTIES[diffKey]);
+    setPendingDifficulty(getDiffConfig(CAPITALS_DIFFICULTIES[diffKey]));
   };
 
   const animateCard = () => {
@@ -433,12 +448,12 @@ export const CapitalsGameScreen: React.FC = () => {
       {
         id: `${currentQ.country.code}-${currentIndex}`,
         flagEmoji: currentQ.country.flagEmoji,
-        countryName: currentQ.country.name,
+        countryName: getCountryName(currentQ.country),
         countryCode: currentQ.country.code,
-        userAnswer: 'Tiempo agotado ⏱️',
+        userAnswer: t('quiz_timeout_user_answer'),
         correctAnswer: currentQ.correctCapital,
         isCorrect: false,
-        fact: currentQ.country.fact,
+        fact: getCountryFact(currentQ.country),
       },
     ]);
 
@@ -659,7 +674,9 @@ export const CapitalsGameScreen: React.FC = () => {
         {/* Header bar */}
         <View style={styles.diffHeaderBar}>
           <View style={styles.diffHeaderTopRow}>
-            <Text style={[styles.diffPretitle, { color: colors.secondaryLabel }]} numberOfLines={1}>TRIVIA & APRENDIZAJE</Text>
+            <Text style={[styles.diffPretitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
+              {t('capitals_header_category')}
+            </Text>
             <View style={styles.headerRight}>
               <StreakBadge streak={stats.streak} size="small" />
               <View style={[styles.xpPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.12)' }]}>
@@ -669,7 +686,7 @@ export const CapitalsGameScreen: React.FC = () => {
             </View>
           </View>
           <Text style={[styles.diffTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
-            Capitales del Mundo
+            {t('capitals_header_title')}
           </Text>
         </View>
 
@@ -679,12 +696,13 @@ export const CapitalsGameScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <Text style={[styles.diffSubtitle, { color: colors.secondaryLabel }]}>
-            Selecciona una dificultad. Las opciones serán ciudades del mismo país, ¡demuestra que conoces la verdadera capital!
+            {t('capitals_header_subtitle')}
           </Text>
 
           {/* Cards for each difficulty */}
           {(Object.keys(CAPITALS_DIFFICULTIES) as CapitalDifficulty[]).map((key) => {
-            const diff = CAPITALS_DIFFICULTIES[key];
+            const rawDiff = CAPITALS_DIFFICULTIES[key];
+            const diff = getDiffConfig(rawDiff);
             const isFeatured = key === 'medium';
             const isHard = key === 'hard';
             const prog = stats.capitalsProgress?.[diff.key] || { correct: 0, total: 0, stars: 0, bestScore: 0 };
@@ -726,7 +744,9 @@ export const CapitalsGameScreen: React.FC = () => {
                       <View style={styles.diffStarsRow}>
                         {renderStars(prog.stars)}
                         {Boolean(prog.bestScore && prog.bestScore > 0) && (
-                          <Text style={[styles.diffBestScoreText, { color: colors.secondaryLabel }]}>Mejor: {prog.bestScore} pts</Text>
+                          <Text style={[styles.diffBestScoreText, { color: colors.secondaryLabel }]}>
+                            {t('capitals_best_score', { score: prog.bestScore ?? 0 })}
+                          </Text>
                         )}
                       </View>
                     </View>
@@ -742,13 +762,17 @@ export const CapitalsGameScreen: React.FC = () => {
                 {/* Description and Examples */}
                 <Text style={[styles.diffDescText, { color: colors.label }]}>{diff.description}</Text>
                 <View style={[styles.diffExamplesBox, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
-                  <Text style={[styles.diffExamplesLabel, { color: colors.tertiaryLabel }]}>EJEMPLOS:</Text>
+                  <Text style={[styles.diffExamplesLabel, { color: colors.tertiaryLabel }]}>
+                    {t('capitals_examples_label')}
+                  </Text>
                   <Text style={[styles.diffExamplesText, { color: colors.secondaryLabel }]}>{diff.examples}</Text>
                 </View>
 
                 {/* Bottom CTA bar */}
                 <View style={styles.diffCardBottomBar}>
-                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>Toca para comenzar</Text>
+                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>
+                    {t('play_action_play')}
+                  </Text>
                   <View style={[styles.diffArrowCircle, { backgroundColor: diff.color }]}>
                     <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
                   </View>
@@ -789,7 +813,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   if (questions.length === 0) return null;
 
-  const currentDiffConfig = CAPITALS_DIFFICULTIES[selectedDifficulty];
+  const currentDiffConfig = getDiffConfig(CAPITALS_DIFFICULTIES[selectedDifficulty]);
   const currentQ = questions[currentIndex];
   const progress = (currentIndex + 1) / questions.length;
 
@@ -814,13 +838,15 @@ export const CapitalsGameScreen: React.FC = () => {
           >
             <Ionicons name={currentDiffConfig.icon} size={15} color={currentDiffConfig.color} />
             <Text style={[styles.diffBadgeGameOverText, { color: currentDiffConfig.color }]}>
-              DIFICULTAD: {currentDiffConfig.shortName.toUpperCase()}
+              {currentDiffConfig.tag}
             </Text>
           </View>
 
-          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>MODO CAPITALES</Text>
+          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>
+            {t('play_mode_capitals_title').toUpperCase()}
+          </Text>
           <Text style={[styles.summaryTitle, { color: colors.label }]}>
-            {stars === 3 ? '¡Maestro Geográfico!' : stars === 2 ? '¡Muy Bien!' : '¡A Seguir Explorando!'}
+            {stars === 3 ? t('results_title_perfect') : stars === 2 ? t('results_title_great') : t('results_title_practice')}
           </Text>
 
           <View style={styles.starsRow}>
@@ -859,28 +885,28 @@ export const CapitalsGameScreen: React.FC = () => {
               </View>
               <Text style={[styles.statNumber, { color: colors.label }]}>{score}/{questions.length}</Text>
               <Text style={[styles.statLabel, { color: colors.systemBlue, fontWeight: '700' }]}>
-                Aciertos 👆
+                {t('quiz_hits_label')}
               </Text>
             </Pressable>
 
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemGreen }]}>{accuracy}%</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Precisión</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_accuracy_label')}</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{xpEarned}</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Ganada</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_xp_earned_label')}</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Racha</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_streak_label')}</Text>
             </View>
           </View>
 
           <View style={styles.summaryActions}>
             {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
               <AppleButton
-                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                title={t('quiz_btn_review_mistakes', { count: reviewItems.filter((i) => !i.isCorrect).length })}
                 onPress={startRetryFailedCapitals}
                 variant="gradient"
                 style={{ width: '100%', marginBottom: 10 }}
@@ -888,7 +914,7 @@ export const CapitalsGameScreen: React.FC = () => {
             )}
 
             <AppleButton
-              title={`Jugar de Nuevo (${currentDiffConfig.shortName})`}
+              title={t('quiz_btn_play_again', { count: currentDiffConfig.shortName })}
               onPress={() => startNewRound(selectedDifficulty, selectedQuestionCount)}
               variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={{ width: '100%', marginBottom: 8 }}
@@ -896,11 +922,11 @@ export const CapitalsGameScreen: React.FC = () => {
 
             {/* Quick Question Count Switcher on Game Over */}
             <View style={styles.summaryCountRow}>
-              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>Preguntas para la próxima ronda:</Text>
+              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>{t('quiz_next_round_questions')}</Text>
               <View style={styles.summaryCountChips}>
                 {([10, 20, 50, 'all'] as const).map((cnt) => {
                   const isSel = selectedQuestionCount === cnt;
-                  const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                  const lbl = cnt === 'all' ? t('game_modal_all_label') : `${cnt}`;
                   return (
                     <Pressable
                       key={String(cnt)}
@@ -937,7 +963,7 @@ export const CapitalsGameScreen: React.FC = () => {
             </View>
 
             <AppleButton
-              title="Cambiar Dificultad"
+              title={t('results_btn_change_diff')}
               onPress={handleBackToDifficulty}
               variant="secondary"
               style={{ width: '100%' }}
@@ -949,7 +975,7 @@ export const CapitalsGameScreen: React.FC = () => {
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={isRetryRound ? "Recuento de Repaso" : `Recuento de Capitales (${currentDiffConfig.shortName})`}
+          title={isRetryRound ? t('quiz_review_retry_title') : `${t('quiz_review_title')} (${currentDiffConfig.shortName})`}
           onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedCapitals : undefined}
         />
       </View>
@@ -984,12 +1010,12 @@ export const CapitalsGameScreen: React.FC = () => {
             {hasSecondChance && (
               <View style={styles.shieldPill}>
                 <Ionicons name="shield-checkmark" size={13} color="#0284C7" />
-                <Text style={styles.shieldPillText}>2ª Oportunidad</Text>
+                <Text style={styles.shieldPillText}>{t('quiz_second_chance_pill')}</Text>
               </View>
             )}
             <View style={[styles.scorePill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.12)' }]}>
               <Ionicons name="trophy" size={13} color={colors.systemPurple} />
-              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} pts</Text>
+              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} {t('quiz_pts')}</Text>
             </View>
             <StreakBadge streak={streak} size="small" />
           </View>
@@ -1002,28 +1028,28 @@ export const CapitalsGameScreen: React.FC = () => {
             gradientColors={currentDiffConfig.gradient}
           />
           <Text style={[styles.questionCounter, { color: colors.tertiaryLabel }]}>
-            {currentIndex + 1} de {questions.length}
+            {t('quiz_counter', { current: currentIndex + 1, total: questions.length })}
           </Text>
         </View>
 
         {isRetryRound && (
           <View style={styles.retryBadgeBar}>
             <Ionicons name="repeat" size={12} color="#D97706" />
-            <Text style={styles.retryBadgeBarText}>MODO REPASO DE CAPITALES</Text>
+            <Text style={styles.retryBadgeBarText}>{t('quiz_mode_retry_badge')}</Text>
           </View>
         )}
 
         {shieldMessage && (
-          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
+          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
             <Ionicons
-              name={shieldMessage.includes('Relámpago') ? 'flash' : 'shield-checkmark'}
+              name={shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? 'flash' : 'shield-checkmark'}
               size={15}
-              color={shieldMessage.includes('Relámpago') ? '#D97706' : '#0284C7'}
+              color={shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? '#D97706' : '#0284C7'}
             />
             <Text
               style={[
                 styles.shieldBannerText,
-                { color: shieldMessage.includes('Relámpago') ? '#92400E' : '#0369A1' },
+                { color: shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? '#92400E' : '#0369A1' },
               ]}
             >
               {shieldMessage}
@@ -1050,8 +1076,10 @@ export const CapitalsGameScreen: React.FC = () => {
             colors.cardShadow,
           ]}
         >
-          <Text style={[styles.questionSubtitle, { color: colors.secondaryLabel }]}>¿Cuál es su capital?</Text>
-          <Text style={[styles.countryName, { color: colors.label }]}>{currentQ.country.name}</Text>
+          <Text style={[styles.questionSubtitle, { color: colors.secondaryLabel }]}>
+            {t('capitals_which_capital', { country: getCountryName(currentQ.country) })}
+          </Text>
+          <Text style={[styles.countryName, { color: colors.label }]}>{getCountryName(currentQ.country)}</Text>
 
           <View style={styles.flagContainer}>
             <FlagImage
@@ -1065,7 +1093,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
           <View style={[styles.infoPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.18)' : 'rgba(175, 82, 222, 0.1)' }]}>
             <Ionicons name="compass" size={14} color={colors.systemPurple} />
-            <Text style={[styles.infoPillText, { color: colors.systemPurple }]}>{currentQ.country.continent}</Text>
+            <Text style={[styles.infoPillText, { color: colors.systemPurple }]}>{getContinentName(currentQ.country.continent)}</Text>
           </View>
         </Animated.View>
 
@@ -1076,9 +1104,9 @@ export const CapitalsGameScreen: React.FC = () => {
               <Ionicons name="timer" size={20} color="#FFFFFF" />
             </View>
             <View style={styles.timeoutBannerTextWrap}>
-              <Text style={styles.timeoutBannerTitle}>¡Tiempo Agotado! (0 pts)</Text>
+              <Text style={styles.timeoutBannerTitle}>{t('quiz_timeout_title')}</Text>
               <Text style={styles.timeoutBannerSubtitle}>
-                Perdiste este turno por no responder a tiempo.
+                {t('quiz_timeout_subtitle')}
               </Text>
             </View>
           </View>
@@ -1192,12 +1220,12 @@ export const CapitalsGameScreen: React.FC = () => {
                 {isEliminated ? (
                   <View style={styles.eliminatedBadge}>
                     <Ionicons name="shield" size={11} color={colors.systemRed} />
-                    <Text style={styles.eliminatedBadgeText}>Descartada</Text>
+                    <Text style={styles.eliminatedBadgeText}>{t('quiz_eliminated_badge')}</Text>
                   </View>
                 ) : isTimeout && isCorrect ? (
                   <View style={styles.timeoutAnswerBadge}>
                     <Ionicons name="information-circle" size={13} color="#D97706" />
-                    <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
+                    <Text style={styles.timeoutAnswerBadgeText}>{t('quiz_timeout_reveal')}</Text>
                   </View>
                 ) : !isTimeout && iconName ? (
                   <Ionicons name={iconName} size={22} color={iconColor} />
@@ -1212,9 +1240,9 @@ export const CapitalsGameScreen: React.FC = () => {
           <View style={[styles.factCard, { backgroundColor: colors.cardBackground, borderColor: isDark ? 'rgba(175, 82, 222, 0.3)' : 'rgba(175, 82, 222, 0.15)', borderWidth: 1 }, colors.cardShadow]}>
             <View style={styles.factHeader}>
               <Ionicons name="sparkles" size={16} color={colors.systemPurple} />
-              <Text style={[styles.factTitle, { color: colors.systemPurple }]}>Dato del País</Text>
+              <Text style={[styles.factTitle, { color: colors.systemPurple }]}>{t('review_card_fact_title')}</Text>
             </View>
-            <Text style={[styles.factBody, { color: colors.label }]}>{currentQ.country.fact}</Text>
+            <Text style={[styles.factBody, { color: colors.label }]}>{getCountryFact(currentQ.country)}</Text>
           </View>
         )}
 
@@ -1269,19 +1297,19 @@ export const CapitalsGameScreen: React.FC = () => {
                     numberOfLines={1}
                   >
                     {selectedCapital === null
-                      ? 'Tiempo Agotado'
+                      ? t('quiz_time_out')
                       : currentIndex + 1 < questions.length
-                      ? 'Siguiente Capital'
-                      : 'Ver Puntuación'}
+                      ? t('quiz_next_question')
+                      : t('quiz_see_results')}
                   </Text>
                   <Text style={[styles.autoAdvanceSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
-                    {selectedCapital === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
+                    {selectedCapital === null ? t('quiz_moving_next') : t('quiz_auto_advancing')}
                   </Text>
                 </View>
               </View>
 
               <View style={[styles.skipBtnPill, { backgroundColor: isDark ? 'rgba(175, 82, 222, 0.2)' : 'rgba(175, 82, 222, 0.1)' }]}>
-                <Text style={[styles.skipBtnText, { color: colors.systemPurple }]}>Saltar</Text>
+                <Text style={[styles.skipBtnText, { color: colors.systemPurple }]}>{t('quiz_skip')}</Text>
                 <Ionicons name="arrow-forward" size={12} color={colors.systemPurple} style={{ marginLeft: 3 }} />
               </View>
             </View>

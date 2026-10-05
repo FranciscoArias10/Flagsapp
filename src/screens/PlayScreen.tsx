@@ -25,12 +25,14 @@ import { GameStartModal } from '../components/GameStartModal';
 import { QuizGameScreen } from './QuizGameScreen';
 import { BlitzGameScreen } from './BlitzGameScreen';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export const PlayScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats } = useGame();
   const { isDark, colors } = useTheme();
+  const { t, getContinentName } = useLanguage();
   const levelInfo = getLevelInfo(stats.xp);
 
   const [activeQuizContinent, setActiveQuizContinent] = useState<Continent | 'Mundo' | null>(null);
@@ -53,8 +55,8 @@ export const PlayScreen: React.FC = () => {
     if (continent === 'Mundo') {
       setSelectedQuizTarget({
         continent: 'Mundo',
-        title: 'Todo el Mundo',
-        subtitle: 'Todos los continentes combinados',
+        title: t('play_global_title_card'),
+        subtitle: t('play_all_continents_combined'),
         icon: 'earth',
         color: '#007AFF',
         gradient: ['#007AFF', '#5856D6'],
@@ -62,10 +64,11 @@ export const PlayScreen: React.FC = () => {
       });
     } else {
       const found = CONTINENTS.find((c) => c.name === continent);
+      const localizedContinent = getContinentName(continent);
       setSelectedQuizTarget({
         continent,
-        title: continent,
-        subtitle: `${found?.count || 0} Países de ${continent}`,
+        title: localizedContinent,
+        subtitle: `${found?.count || 0} ${t('play_continents_count_label', { count: '' }).trim()} • ${localizedContinent}`,
         icon: (found?.icon as any) || 'globe-outline',
         color: found?.color || '#007AFF',
         gradient: [found?.color || '#007AFF', '#5856D6'],
@@ -99,7 +102,7 @@ export const PlayScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       <AppleHeader
         title="Flags++"
-        category="TRIVIA & GEOGRAFÍA"
+        category={t('play_header_category')}
         showLogo
         rightAccessory={
           <View style={styles.headerRight}>
@@ -123,10 +126,16 @@ export const PlayScreen: React.FC = () => {
               <Text style={styles.userAvatarEmoji}>{stats.avatar || '🧭'}</Text>
             </View>
             <View style={styles.userStripMeta}>
-              <Text style={[styles.userGreeting, { color: colors.label }]} numberOfLines={1}>¡Hola, {stats.username || 'Explorador'}!</Text>
-              <Text style={[styles.userStripLevel, { color: colors.systemPurple }]} numberOfLines={1}>Nivel {levelInfo.level} • {levelInfo.title}</Text>
+              <Text style={[styles.userGreeting, { color: colors.label }]} numberOfLines={1}>
+                {t('play_greeting', { name: stats.username || t('play_default_user') })}
+              </Text>
+              <Text style={[styles.userStripLevel, { color: colors.systemPurple }]} numberOfLines={1}>
+                {t('play_level_prefix')} {levelInfo.level} • {levelInfo.title}
+              </Text>
               <Text style={[styles.userStripSub, { color: colors.secondaryLabel }]} numberOfLines={1}>
-                {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para subir de nivel` : '¡Nivel Legendario!'}
+                {levelInfo.xpToNext > 0
+                  ? t('play_xp_to_next', { xp: levelInfo.xpToNext })
+                  : t('play_legendary_level')}
               </Text>
             </View>
             <View style={styles.userStripBadge}>
@@ -150,15 +159,13 @@ export const PlayScreen: React.FC = () => {
             <View style={styles.heroContent}>
               <View style={styles.heroBadge}>
                 <Ionicons name="flash" size={12} color="#FFFFFF" />
-                <Text style={styles.heroBadgeText}>CONTRARRELOJ • 5S, 10S O 15S</Text>
+                <Text style={styles.heroBadgeText}>{t('play_blitz_badge')}</Text>
               </View>
-              <Text style={styles.heroTitle}>Desafío Blitz ⚡</Text>
-              <Text style={styles.heroSubtitle}>
-                Elige tu dificultad: 15s, 10s o extremo 5s. ¡Reflejos al límite!
-              </Text>
+              <Text style={styles.heroTitle}>{t('play_blitz_title')}</Text>
+              <Text style={styles.heroSubtitle}>{t('play_blitz_subtitle')}</Text>
 
               <View style={styles.heroBtn}>
-                <Text style={styles.heroBtnText}>Jugar Blitz</Text>
+                <Text style={styles.heroBtnText}>{t('play_blitz_btn')}</Text>
                 <Ionicons name="arrow-forward" size={16} color="#FF3B30" />
               </View>
             </View>
@@ -166,7 +173,7 @@ export const PlayScreen: React.FC = () => {
         </Pressable>
 
         {/* Global Explorer Mode Card */}
-        <Text style={styles.sectionTitle}>MODO GLOBAL</Text>
+        <Text style={styles.sectionTitle}>{t('play_global_section')}</Text>
         <Pressable
           onPress={() => handleStartQuiz('Mundo')}
           style={({ pressed }) => [styles.globalCard, pressed && { opacity: 0.94 }]}
@@ -182,18 +189,18 @@ export const PlayScreen: React.FC = () => {
                 <Ionicons name="earth" size={28} color="#FFFFFF" />
               </View>
               <View style={styles.globalMeta}>
-                <Text style={styles.globalTitle}>Todo el Mundo</Text>
-                <Text style={styles.globalSubtitle}>Todos los continentes combinados</Text>
+                <Text style={styles.globalTitle}>{t('play_global_title_card')}</Text>
+                <Text style={styles.globalSubtitle}>{t('play_global_subtitle_card')}</Text>
               </View>
             </View>
             <View style={styles.globalFooter}>
               <View style={styles.globalFooterLeft}>
                 <Text style={styles.globalQuestionCount} numberOfLines={1}>
-                  126 Países • Personalizable
+                  {t('play_global_count_label')}
                 </Text>
               </View>
               <View style={styles.globalPlayBtn}>
-                <Text style={styles.globalPlayBtnText}>Jugar</Text>
+                <Text style={styles.globalPlayBtnText}>{t('play_btn_play')}</Text>
                 <Ionicons name="play" size={13} color="#007AFF" />
               </View>
             </View>
@@ -201,10 +208,13 @@ export const PlayScreen: React.FC = () => {
         </Pressable>
 
         {/* Continents Grid */}
-        <Text style={[styles.sectionTitle, { color: colors.secondaryLabel }]}>NIVELES POR CONTINENTE</Text>
+        <Text style={[styles.sectionTitle, { color: colors.secondaryLabel }]}>
+          {t('play_continents_section')}
+        </Text>
         <View style={styles.continentsGrid}>
           {CONTINENTS.map((item) => {
             const prog = stats.continentProgress[item.name] || { correct: 0, total: 0, stars: 0 };
+            const localizedContinent = getContinentName(item.name);
             return (
               <Pressable
                 key={item.name}
@@ -232,13 +242,15 @@ export const PlayScreen: React.FC = () => {
                   {renderStars(prog.stars)}
                 </View>
 
-                <Text style={[styles.continentName, { color: colors.label }]}>{item.name}</Text>
-                <Text style={[styles.continentCount, { color: colors.secondaryLabel }]}>{item.count} Países</Text>
+                <Text style={[styles.continentName, { color: colors.label }]}>{localizedContinent}</Text>
+                <Text style={[styles.continentCount, { color: colors.secondaryLabel }]}>
+                  {t('play_continents_count_label', { count: item.count })}
+                </Text>
 
                 <View style={styles.continentFooter}>
                   <View style={[styles.continentPlayBadge, { backgroundColor: `${item.color}15` }]}>
                     <Text style={[styles.continentPlayTxt, { color: item.color }]}>
-                      Jugar
+                      {t('play_btn_play')}
                     </Text>
                     <Ionicons name="play" size={11} color={item.color} />
                   </View>

@@ -34,9 +34,9 @@ interface LanguageContextType {
   languagePreference: LanguagePreference;
   setLanguagePreference: (preference: LanguagePreference) => Promise<void>;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
-  getCountryName: (code: string, fallbackName?: string) => string;
-  getCapitalName: (code: string, fallbackCapital?: string) => string;
-  getCountryFact: (code: string, fallbackFact?: string) => string;
+  getCountryName: (codeOrCountry: string | { code: string; name?: string }, fallbackName?: string) => string;
+  getCapitalName: (codeOrCountry: string | { code: string; capital?: string }, fallbackCapital?: string) => string;
+  getCountryFact: (codeOrCountry: string | { code: string; fact?: string }, fallbackFact?: string) => string;
   getContinentName: (continent: string) => string;
   getAchievementInfo: (
     id: string,
@@ -114,34 +114,40 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const getCountryName = useCallback(
-    (code: string, fallbackName: string = ''): string => {
-      if (language === 'en') {
+    (codeOrCountry: string | { code: string; name?: string }, fallbackName: string = ''): string => {
+      const code = typeof codeOrCountry === 'string' ? codeOrCountry : codeOrCountry?.code;
+      const fallback = typeof codeOrCountry === 'object' && codeOrCountry?.name ? codeOrCountry.name : fallbackName;
+      if (language === 'en' && code) {
         const enCountry = COUNTRY_TRANSLATIONS_EN[code.toLowerCase()];
         if (enCountry?.name) return enCountry.name;
       }
-      return fallbackName;
+      return fallback || code || '';
     },
     [language]
   );
 
   const getCapitalName = useCallback(
-    (code: string, fallbackCapital: string = ''): string => {
-      if (language === 'en') {
+    (codeOrCountry: string | { code: string; capital?: string }, fallbackCapital: string = ''): string => {
+      const code = typeof codeOrCountry === 'string' ? codeOrCountry : codeOrCountry?.code;
+      const fallback = typeof codeOrCountry === 'object' && codeOrCountry?.capital ? codeOrCountry.capital : fallbackCapital;
+      if (language === 'en' && code) {
         const enCountry = COUNTRY_TRANSLATIONS_EN[code.toLowerCase()];
         if (enCountry?.capital) return enCountry.capital;
       }
-      return fallbackCapital;
+      return fallback || '';
     },
     [language]
   );
 
   const getCountryFact = useCallback(
-    (code: string, fallbackFact: string = ''): string => {
-      if (language === 'en') {
+    (codeOrCountry: string | { code: string; fact?: string }, fallbackFact: string = ''): string => {
+      const code = typeof codeOrCountry === 'string' ? codeOrCountry : codeOrCountry?.code;
+      const fallback = typeof codeOrCountry === 'object' && codeOrCountry?.fact ? codeOrCountry.fact : fallbackFact;
+      if (language === 'en' && code) {
         const enCountry = COUNTRY_TRANSLATIONS_EN[code.toLowerCase()];
         if (enCountry?.fact) return enCountry.fact;
       }
-      return fallbackFact;
+      return fallback || '';
     },
     [language]
   );

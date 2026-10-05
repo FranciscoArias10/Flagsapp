@@ -25,6 +25,7 @@ import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { GameStartModal } from '../components/GameStartModal';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface BlitzQuestion {
   target: Country;
@@ -107,7 +108,19 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
   const { isDark, colors } = useTheme();
+  const { t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
+
+  const getBlitzDiffConfig = (diff: BlitzDifficultyConfig): BlitzDifficultyConfig => {
+    return {
+      ...diff,
+      title: t(`blitz_${diff.key}_title` as any),
+      badge: t(`blitz_${diff.key}_badge` as any),
+      subtitle: t(`blitz_${diff.key}_subtitle` as any),
+      description: t(`blitz_${diff.key}_desc` as any),
+      tag: t(`blitz_${diff.key}_tag` as any),
+    };
+  };
 
   const [screenMode, setScreenMode] = useState<ScreenMode>('difficulty_select');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BlitzDifficulty>('medium');
@@ -295,8 +308,8 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       showBonusPopup('⚡ ¡Relámpago! +1 Escudo 🛡️');
     }
 
-    const userAnswer = currentQ.options[idx]?.name || '';
-    const correctAnswer = currentQ.options[currentQ.correctIndex]?.name || '';
+    const userAnswer = getCountryName(currentQ.options[idx]);
+    const correctAnswer = getCountryName(currentQ.options[currentQ.correctIndex]);
     const diffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
 
     // Record review item
@@ -305,12 +318,12 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
       {
         id: `${currentQ.target.code}-${Date.now()}-${prev.length}`,
         flagEmoji: currentQ.target.flagEmoji,
-        countryName: currentQ.target.name,
+        countryName: getCountryName(currentQ.target),
         countryCode: currentQ.target.code,
         userAnswer,
         correctAnswer,
         isCorrect,
-        fact: currentQ.target.fact,
+        fact: getCountryFact(currentQ.target),
       },
     ]);
 
@@ -399,9 +412,9 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             <Ionicons name="close-circle" size={32} color={colors.tertiaryLabel} />
           </Pressable>
           <View style={styles.diffHeaderTitleWrap}>
-            <Text style={[styles.diffPretitle, { color: colors.systemOrange }]}>MODO CONTRARRELOJ</Text>
+            <Text style={[styles.diffPretitle, { color: colors.systemOrange }]}>{t('blitz_header_category')}</Text>
             <Text style={[styles.diffTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
-              Desafío Blitz
+              {t('blitz_header_title')}
             </Text>
           </View>
           <View style={{ width: 32 }} />
@@ -413,12 +426,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           showsVerticalScrollIndicator={false}
         >
           <Text style={[styles.diffSubtitle, { color: colors.secondaryLabel }]}>
-            Selecciona tu nivel de adrenalina. Cada acierto suma segundos al reloj, pero cada error te restará tiempo:
+            {t('blitz_header_subtitle')}
           </Text>
 
           {/* Cards for each difficulty */}
           {(Object.keys(BLITZ_DIFFICULTIES) as BlitzDifficulty[]).map((key) => {
-            const diff = BLITZ_DIFFICULTIES[key];
+            const rawDiff = BLITZ_DIFFICULTIES[key];
+            const diff = getBlitzDiffConfig(rawDiff);
             const isFeatured = key === 'medium';
             const isHard = key === 'hard';
 
@@ -472,26 +486,28 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                   <View style={[styles.diffRulePill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' }]}>
                     <Ionicons name="timer-outline" size={14} color={diff.color} />
                     <Text style={[styles.diffRulePillText, { color: diff.color }]}>
-                      {diff.seconds}s iniciales
+                      {diff.seconds}s
                     </Text>
                   </View>
                   <View style={[styles.diffRulePill, { backgroundColor: 'rgba(52, 199, 89, 0.12)' }]}>
                     <Ionicons name="add-circle-outline" size={14} color={colors.systemGreen} />
                     <Text style={[styles.diffRulePillText, { color: colors.systemGreen }]}>
-                      +{diff.bonus}s acierto
+                      +{diff.bonus}s
                     </Text>
                   </View>
                   <View style={[styles.diffRulePill, { backgroundColor: 'rgba(255, 59, 48, 0.12)' }]}>
                     <Ionicons name="remove-circle-outline" size={14} color={colors.systemRed} />
                     <Text style={[styles.diffRulePillText, { color: colors.systemRed }]}>
-                      -{diff.penalty}s fallo
+                      -{diff.penalty}s
                     </Text>
                   </View>
                 </View>
 
                 {/* Bottom CTA bar */}
                 <View style={styles.diffCardBottomBar}>
-                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>Toca para comenzar</Text>
+                  <Text style={[styles.diffCardPlayText, { color: diff.color }]}>
+                    {t('play_action_play')}
+                  </Text>
                   <View style={[styles.diffArrowCircle, { backgroundColor: diff.color }]}>
                     <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
                   </View>
@@ -535,23 +551,22 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
 
   // 2. GAME OVER / RESULTS SCREEN
   if (screenMode === 'game_over') {
-    const currentDiffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
+    const rawDiffConfig = BLITZ_DIFFICULTIES[selectedDifficulty];
+    const currentDiffConfig = getBlitzDiffConfig(rawDiffConfig);
     const rankTitle =
       score >= 16
-        ? '⚡ Dios del Rayo'
+        ? '⚡ ' + t('results_title_perfect')
         : score >= 10
-        ? '🚀 Supersónico'
+        ? '🚀 ' + t('results_title_great')
         : score >= 6
-        ? '🏎️ Veloz'
-        : score >= 3
-        ? '🧭 Explorador Ágil'
-        : '⏱️ Buen Intento';
+        ? '🏎️ ' + t('results_title_good')
+        : '⏱️ ' + t('results_title_practice');
 
     return (
       <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.gameOverWrap}>
-          <Text style={[styles.blitzPretitle, { color: colors.systemOrange }]}>¡TIEMPO AGOTADO!</Text>
+          <Text style={[styles.blitzPretitle, { color: colors.systemOrange }]}>{t('blitz_game_over_badge')}</Text>
           <Text style={[styles.blitzRank, { color: colors.label }]}>{rankTitle}</Text>
 
           {/* Difficulty Badge */}
@@ -563,7 +578,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           >
             <Ionicons name={currentDiffConfig.icon} size={15} color={currentDiffConfig.color} />
             <Text style={[styles.diffBadgeGameOverText, { color: currentDiffConfig.color }]}>
-              DIFICULTAD: {currentDiffConfig.title.toUpperCase()} ({currentDiffConfig.seconds}S)
+              {currentDiffConfig.tag} • {currentDiffConfig.title.toUpperCase()} ({currentDiffConfig.seconds}S)
             </Text>
           </View>
 
@@ -590,24 +605,24 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
               <Text style={styles.reviewBadgeHintText}>VER</Text>
             </View>
             <Text style={[styles.bigScore, { color: colors.label }]}>{score}</Text>
-            <Text style={[styles.bigScoreLabel, { color: colors.systemBlue }]}>Aciertos 👆</Text>
+            <Text style={[styles.bigScoreLabel, { color: colors.systemBlue }]}>{t('quiz_hits_label')}</Text>
           </Pressable>
 
           <View style={styles.statCardsGrid}>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_streak_label')}</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{score * 35}</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Total</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_xp_earned_label')}</Text>
             </View>
           </View>
 
           <View style={styles.actions}>
             {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
               <AppleButton
-                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                title={t('quiz_btn_review_mistakes', { count: reviewItems.filter((i) => !i.isCorrect).length })}
                 onPress={startRetryFailedBlitz}
                 variant="gradient"
                 style={{ width: '100%', marginBottom: 10 }}
@@ -615,13 +630,13 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
             )}
 
             <AppleButton
-              title={`Jugar Otra Vez (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
+              title={t('quiz_btn_play_again', { count: `${currentDiffConfig.title} ${currentDiffConfig.seconds}s` })}
               onPress={restartBlitz}
               variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={{ width: '100%' }}
             />
             <AppleButton
-              title="Cambiar Dificultad"
+              title={t('results_btn_change_diff')}
               onPress={handleChangeDifficulty}
               variant="secondary"
               style={{ width: '100%', marginTop: 10 }}
@@ -633,7 +648,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                 pressed && { opacity: 0.7 },
               ]}
             >
-              <Text style={[styles.exitLinkBtnText, { color: colors.secondaryLabel }]}>Volver al Menú</Text>
+              <Text style={[styles.exitLinkBtnText, { color: colors.secondaryLabel }]}>{t('quiz_btn_main_menu')}</Text>
             </Pressable>
           </View>
         </View>
@@ -642,7 +657,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={isRetryRound ? "Recuento de Repaso Blitz" : `Recuento Blitz (${currentDiffConfig.title} ${currentDiffConfig.seconds}s)`}
+          title={isRetryRound ? t('quiz_review_retry_title') : `${t('quiz_review_title')} Blitz (${currentDiffConfig.title})`}
           onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedBlitz : undefined}
         />
       </View>
@@ -761,7 +776,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           colors.cardShadow,
         ]}
       >
-        <Text style={[styles.prompt, { color: colors.secondaryLabel }]}>Identifica rápido:</Text>
+        <Text style={[styles.prompt, { color: colors.secondaryLabel }]}>{t('quiz_which_country')}</Text>
         <FlagImage
           countryCode={currentQ.target.code}
           fallbackEmoji={currentQ.target.flagEmoji}
@@ -769,7 +784,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
           height={150}
           borderRadius={20}
         />
-        <Text style={[styles.continentHint, { color: colors.tertiaryLabel }]}>{currentQ.target.continent}</Text>
+        <Text style={[styles.continentHint, { color: colors.tertiaryLabel }]}>{getContinentName(currentQ.target.continent)}</Text>
       </Animated.View>
 
       {/* 4 Quick Options */}
@@ -827,7 +842,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                   isAnswered && isSelected && !isCorrect && styles.optTextWrong,
                 ]}
               >
-                {option.name}
+                {getCountryName(option)}
               </Text>
               {isEliminated ? (
                 <Ionicons name="shield" size={16} color={colors.systemRed} />

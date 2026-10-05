@@ -24,6 +24,7 @@ import { ConfettiView } from '../components/ConfettiView';
 import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
@@ -42,6 +43,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
   const { isDark, colors } = useTheme();
+  const { t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
@@ -252,19 +254,20 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
     const currentQ = questions[currentIndex];
     if (!currentQ) return;
-    const correctAnswer = currentQ.options[currentQ.correctOptionIndex]?.name || '';
+    const target = currentQ.targetCountry;
+    const correctAnswer = getCountryName(currentQ.options[currentQ.correctOptionIndex]);
 
     setReviewItems((prev) => [
       ...prev,
       {
-        id: currentQ.id || `${currentQ.targetCountry.code}-${currentIndex}`,
-        flagEmoji: currentQ.targetCountry.flagEmoji,
-        countryName: currentQ.targetCountry.name,
-        countryCode: currentQ.targetCountry.code,
-        userAnswer: 'Tiempo agotado ⏱️',
+        id: currentQ.id || `${target.code}-${currentIndex}`,
+        flagEmoji: target.flagEmoji,
+        countryName: getCountryName(target),
+        countryCode: target.code,
+        userAnswer: t('quiz_timeout_user_answer'),
         correctAnswer,
         isCorrect: false,
-        fact: currentQ.targetCountry.fact,
+        fact: getCountryFact(target),
       },
     ]);
 
@@ -308,7 +311,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       setEliminatedOptions((prev) => [...prev, index]);
       soundService.triggerShield();
       triggerShake();
-      setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta pregunta');
+      setShieldMessage(t('quiz_shield_defend_msg'));
       // Give buffer so they can read and try again without instant timeout
       setTimeLeft((prev) => Math.max(prev, 5));
       return;
@@ -322,14 +325,14 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     setSelectedOptionIndex(index);
     setIsAnswered(true);
 
-    const userAnswer = currentQ.options[index]?.name || '';
-    const correctAnswer = currentQ.options[currentQ.correctOptionIndex]?.name || '';
+    const userAnswer = getCountryName(currentQ.options[index]);
+    const correctAnswer = getCountryName(currentQ.options[currentQ.correctOptionIndex]);
 
     // Fast Answer Second Chance Shield Reward (on lightning-fast correct answer)
     if (isCorrect && fastOpportunityEnabled && !hasSecondChance && elapsedSeconds <= 2.5) {
       setHasSecondChance(true);
       soundService.triggerShield();
-      setShieldMessage('⚡ ¡Respuesta Relámpago! Ganaste 1 Segunda Oportunidad 🛡️');
+      setShieldMessage(t('quiz_lightning_msg'));
       setTimeout(() => setShieldMessage(null), 3000);
     }
 
@@ -339,12 +342,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       {
         id: currentQ.id || `${currentQ.targetCountry.code}-${currentIndex}`,
         flagEmoji: currentQ.targetCountry.flagEmoji,
-        countryName: currentQ.targetCountry.name,
+        countryName: getCountryName(currentQ.targetCountry),
         countryCode: currentQ.targetCountry.code,
         userAnswer,
         correctAnswer,
         isCorrect,
-        fact: currentQ.targetCountry.fact,
+        fact: getCountryFact(currentQ.targetCountry),
       },
     ]);
 
@@ -480,9 +483,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <ConfettiView active={showConfetti} onFinish={() => setShowConfetti(false)} />
         <View style={styles.summaryContainer}>
-          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>RONDA COMPLETADA</Text>
+          <Text style={[styles.summaryPretitle, { color: colors.systemBlue }]}>{t('quiz_round_completed')}</Text>
           <Text style={[styles.summaryTitle, { color: colors.label }]}>
-            {stars === 3 ? '¡Excelente!' : stars === 2 ? '¡Gran Trabajo!' : '¡Sigue Practicando!'}
+            {stars === 3 ? t('results_title_perfect') : stars === 2 ? t('results_title_great') : t('results_title_practice')}
           </Text>
 
           {/* Stars */}
@@ -535,21 +538,21 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               </View>
               <Text style={[styles.statNumber, { color: colors.label }]}>{score}/{questions.length}</Text>
               <Text style={[styles.statLabel, { color: colors.systemBlue, fontWeight: '700' }]}>
-                Aciertos 👆
+                {t('quiz_hits_label')}
               </Text>
             </Pressable>
 
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemGreen }]}>{accuracy}%</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Precisión</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_accuracy_label')}</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemPurple }]}>+{xpEarned}</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>XP Ganada</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_xp_earned_label')}</Text>
             </View>
             <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }, colors.cardShadow]}>
               <Text style={[styles.statNumber, { color: colors.systemOrange }]}>{highestStreak} 🔥</Text>
-              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
+              <Text style={[styles.statLabel, { color: colors.secondaryLabel }]}>{t('quiz_streak_label')}</Text>
             </View>
           </View>
 
@@ -557,7 +560,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           <View style={styles.summaryActions}>
             {reviewItems.filter((i) => !i.isCorrect).length > 0 && (
               <AppleButton
-                title={`🔁 Repasar Fallos (${reviewItems.filter((i) => !i.isCorrect).length})`}
+                title={t('quiz_btn_review_mistakes', { count: reviewItems.filter((i) => !i.isCorrect).length })}
                 onPress={startRetryFailedQuestions}
                 variant="gradient"
                 style={[styles.actionBtn, { marginBottom: 10 }]}
@@ -565,7 +568,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             )}
 
             <AppleButton
-              title={`Jugar Otra Vez (${questionCount === 'all' ? 'Todas' : `${questionCount} Qs`})`}
+              title={t('quiz_btn_play_again', { count: questionCount === 'all' ? t('game_modal_all_label') : `${questionCount} Qs` })}
               onPress={() => startNewGame()}
               variant={reviewItems.filter((i) => !i.isCorrect).length > 0 ? "secondary" : "gradient"}
               style={styles.actionBtn}
@@ -573,11 +576,11 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
             {/* Quick Question Count Switcher on Game Over */}
             <View style={styles.summaryCountRow}>
-              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>Preguntas para la próxima ronda:</Text>
+              <Text style={[styles.summaryCountLabel, { color: colors.secondaryLabel }]}>{t('quiz_next_round_questions')}</Text>
               <View style={styles.summaryCountChips}>
                 {([10, 20, 50, 'all'] as const).map((cnt) => {
                   const isSel = questionCount === cnt;
-                  const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                  const lbl = cnt === 'all' ? t('game_modal_all_label') : `${cnt}`;
                   return (
                     <Pressable
                       key={String(cnt)}
@@ -614,7 +617,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             </View>
 
             <AppleButton
-              title="Menú Principal"
+              title={t('quiz_btn_main_menu')}
               onPress={onClose}
               variant="secondary"
               style={styles.actionBtn}
@@ -626,7 +629,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           visible={showReviewModal}
           onClose={() => setShowReviewModal(false)}
           items={reviewItems}
-          title={isRetryRound ? "Recuento de Repaso" : "Recuento de Quiz"}
+          title={isRetryRound ? t('quiz_review_retry_title') : t('quiz_review_title')}
           onRetryFailures={reviewItems.filter((i) => !i.isCorrect).length > 0 ? startRetryFailedQuestions : undefined}
         />
       </View>
@@ -678,12 +681,12 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             {hasSecondChance && (
               <View style={styles.shieldPill}>
                 <Ionicons name="shield-checkmark" size={13} color="#0284C7" />
-                <Text style={styles.shieldPillText}>2ª Oportunidad</Text>
+                <Text style={styles.shieldPillText}>{t('quiz_second_chance_pill')}</Text>
               </View>
             )}
             <View style={styles.scorePill}>
               <Ionicons name="trophy" size={13} color={colors.systemPurple} />
-              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} pts</Text>
+              <Text style={[styles.scorePillText, { color: colors.systemPurple }]}>{score} {t('quiz_pts')}</Text>
             </View>
             <StreakBadge streak={currentStreak} size="small" />
           </View>
@@ -692,28 +695,28 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
         <View style={styles.progressContainer}>
           <ProgressBar progress={progress} height={6} />
           <Text style={[styles.questionCounter, { color: colors.tertiaryLabel }]}>
-            {currentIndex + 1} de {questions.length}
+            {t('quiz_counter', { current: currentIndex + 1, total: questions.length })}
           </Text>
         </View>
 
         {isRetryRound && (
           <View style={styles.retryBadgeBar}>
             <Ionicons name="repeat" size={12} color="#D97706" />
-            <Text style={styles.retryBadgeBarText}>MODO REPASO DE FALLOS</Text>
+            <Text style={styles.retryBadgeBarText}>{t('quiz_mode_retry_badge')}</Text>
           </View>
         )}
 
         {shieldMessage && (
-          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
+          <View style={[styles.shieldBanner, shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? styles.shieldBannerReward : styles.shieldBannerDefend]}>
             <Ionicons
-              name={shieldMessage.includes('Relámpago') ? 'flash' : 'shield-checkmark'}
+              name={shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? 'flash' : 'shield-checkmark'}
               size={15}
-              color={shieldMessage.includes('Relámpago') ? '#D97706' : '#0284C7'}
+              color={shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? '#D97706' : '#0284C7'}
             />
             <Text
               style={[
                 styles.shieldBannerText,
-                { color: shieldMessage.includes('Relámpago') ? '#92400E' : '#0369A1' },
+                { color: shieldMessage.includes('Relámpago') || shieldMessage.includes('Lightning') ? '#92400E' : '#0369A1' },
               ]}
             >
               {shieldMessage}
@@ -740,7 +743,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             },
           ]}
         >
-          <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>¿A qué país pertenece esta bandera?</Text>
+          <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>{t('quiz_which_country')}</Text>
 
           <View style={styles.flagWrap}>
             <FlagImage
@@ -754,7 +757,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
           <View style={styles.continentPill}>
             <Ionicons name="location-sharp" size={13} color={IOSColors.systemBlue} />
-            <Text style={styles.continentPillText}>{currentQ.targetCountry.continent}</Text>
+            <Text style={styles.continentPillText}>{getContinentName(currentQ.targetCountry.continent)}</Text>
           </View>
         </Animated.View>
 
@@ -765,9 +768,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
               <Ionicons name="timer" size={20} color="#FFFFFF" />
             </View>
             <View style={styles.timeoutBannerTextWrap}>
-              <Text style={styles.timeoutBannerTitle}>¡Tiempo Agotado! (0 pts)</Text>
+              <Text style={styles.timeoutBannerTitle}>{t('quiz_timeout_title')}</Text>
               <Text style={styles.timeoutBannerSubtitle}>
-                Perdiste este turno por no responder a tiempo.
+                {t('quiz_timeout_subtitle')}
               </Text>
             </View>
           </View>
@@ -856,17 +859,17 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     isTimeout && !isCorrectOption && { color: colors.tertiaryLabel },
                   ]}
                 >
-                  {option.name}
+                  {getCountryName(option)}
                 </Text>
                 {isEliminated ? (
                   <View style={styles.eliminatedBadge}>
                     <Ionicons name="shield" size={11} color={colors.systemRed} />
-                    <Text style={styles.eliminatedBadgeText}>Descartada</Text>
+                    <Text style={styles.eliminatedBadgeText}>{t('quiz_eliminated_badge')}</Text>
                   </View>
                 ) : isTimeout && isCorrectOption ? (
                   <View style={styles.timeoutAnswerBadge}>
                     <Ionicons name="information-circle" size={13} color="#D97706" />
-                    <Text style={styles.timeoutAnswerBadgeText}>Era la correcta</Text>
+                    <Text style={styles.timeoutAnswerBadgeText}>{t('quiz_timeout_reveal')}</Text>
                   </View>
                 ) : !isTimeout && iconName ? (
                   <Ionicons name={iconName} size={22} color={iconColor} />
@@ -890,11 +893,11 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           >
             <View style={styles.factHeader}>
               <Ionicons name="information-circle" size={18} color={colors.systemBlue} />
-              <Text style={[styles.factTitle, { color: colors.systemBlue }]}>¿Sabías que...?</Text>
+              <Text style={[styles.factTitle, { color: colors.systemBlue }]}>{t('quiz_did_you_know')}</Text>
             </View>
-            <Text style={[styles.factText, { color: colors.label }]}>{currentQ.targetCountry.fact}</Text>
+            <Text style={[styles.factText, { color: colors.label }]}>{getCountryFact(currentQ.targetCountry)}</Text>
             <Text style={[styles.factCapital, { color: colors.secondaryLabel }]}>
-              Capital: <Text style={{ fontWeight: '700', color: colors.label }}>{currentQ.targetCountry.capital}</Text> • Población: {currentQ.targetCountry.population}
+              {t('quiz_capital_label')}: <Text style={{ fontWeight: '700', color: colors.label }}>{getCapitalName(currentQ.targetCountry)}</Text> • {t('quiz_population_label')}: {currentQ.targetCountry.population}
             </Text>
           </View>
         )}
@@ -950,19 +953,19 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     numberOfLines={1}
                   >
                     {selectedOptionIndex === null
-                      ? 'Tiempo Agotado'
+                      ? t('quiz_time_out')
                       : currentIndex + 1 < questions.length
-                      ? 'Siguiente Pregunta'
-                      : 'Ver Resultados'}
+                      ? t('quiz_next_question')
+                      : t('quiz_see_results')}
                   </Text>
                   <Text style={[styles.autoAdvanceSubtitle, { color: colors.secondaryLabel }]} numberOfLines={1}>
-                    {selectedOptionIndex === null ? 'Pasando a la siguiente...' : 'Avanzando automáticamente'}
+                    {selectedOptionIndex === null ? t('quiz_moving_next') : t('quiz_auto_advancing')}
                   </Text>
                 </View>
               </View>
 
               <View style={[styles.skipBtnPill, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
-                <Text style={[styles.skipBtnText, { color: colors.systemBlue }]}>Saltar</Text>
+                <Text style={[styles.skipBtnText, { color: colors.systemBlue }]}>{t('quiz_skip')}</Text>
                 <Ionicons name="arrow-forward" size={12} color={colors.systemBlue} style={{ marginLeft: 3 }} />
               </View>
             </View>

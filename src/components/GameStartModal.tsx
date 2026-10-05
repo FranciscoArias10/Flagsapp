@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { AppleButton } from './AppleButton';
 
 export interface GameStartModalProps {
@@ -45,6 +46,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
   totalAvailable,
 }) => {
   const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
   const [selectedCount, setSelectedCount] = useState<number | 'all'>(initialCount);
   const [selectedTime, setSelectedTime] = useState<number>(initialTime);
 
@@ -71,9 +73,9 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
   };
 
   const timeOptions = [
-    { sec: 10, label: '10s', sub: 'Ágil' },
-    { sec: 15, label: '15s', sub: 'Estándar' },
-    { sec: 20, label: '20s', sub: 'Relax' },
+    { sec: 10, label: '10s', sub: t('game_modal_time_fast') },
+    { sec: 15, label: '15s', sub: t('game_modal_time_standard') },
+    { sec: 20, label: '20s', sub: t('game_modal_time_relax') },
   ];
 
   const questionOptions: (number | 'all')[] = [10, 20, 50, 'all'];
@@ -129,18 +131,20 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
               {/* Section 1: Question Count Selector */}
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>CANTIDAD DE PREGUNTAS</Text>
+                  <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>
+                    {t('game_modal_questions_title')}
+                  </Text>
                   <Text style={[styles.sectionSub, { color }]}>
                     {selectedCount === 'all'
-                      ? totalAvailable ? `${totalAvailable} Preguntas (Todas)` : 'Catálogo Completo'
-                      : `${selectedCount} Preguntas`}
+                      ? totalAvailable ? t('game_modal_questions_all', { count: totalAvailable }) : t('game_modal_questions_full_catalog')
+                      : t('game_modal_questions_count', { count: selectedCount })}
                   </Text>
                 </View>
 
                 <View style={styles.chipsRow}>
                   {questionOptions.map((cnt) => {
                     const isSel = selectedCount === cnt;
-                    const lbl = cnt === 'all' ? 'Todas' : `${cnt}`;
+                    const lbl = cnt === 'all' ? t('game_modal_all_label') : `${cnt}`;
                     return (
                       <Pressable
                         key={String(cnt)}
@@ -164,9 +168,11 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
               {showTimeSelector ? (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>TIEMPO POR PREGUNTA</Text>
+                    <Text style={[styles.sectionLabel, { color: colors.secondaryLabel }]}>
+                      {t('game_modal_time_title')}
+                    </Text>
                     <Text style={[styles.sectionSub, { color }]}>
-                      {selectedTime} segundos
+                      {t('game_modal_time_seconds', { seconds: selectedTime })}
                     </Text>
                   </View>
 
@@ -203,7 +209,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
                 <View style={[styles.rhythmBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)' }]}>
                   <Ionicons name="flash" size={16} color={color} />
                   <Text style={[styles.rhythmBadgeText, { color }]}>
-                    Ritmo fijado: {initialTime}s iniciales con bonus por acierto
+                    {t('game_modal_rhythm_fixed', { seconds: initialTime })}
                   </Text>
                 </View>
               )}
@@ -211,7 +217,7 @@ export const GameStartModal: React.FC<GameStartModalProps> = ({
               {/* CTA Start Button */}
               <View style={styles.footer}>
                 <AppleButton
-                  title="¡Comenzar Partida!"
+                  title={t('game_modal_start_btn')}
                   onPress={handleStart}
                   variant="gradient"
                   style={{ width: '100%' }}
