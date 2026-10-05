@@ -13,16 +13,20 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
 
-### 🌐 Internacionalización y Soporte Multi-idioma (i18n)
-- [ ] **Soporte de Idioma Inglés y Detección Automática**:
-  - Detectar el idioma del dispositivo mediante `expo-localization`.
-  - Diccionario de textos de interfaz (UI: botones, pestañas, modales, alertas y estadísticas).
-  - Traducción de nombres de países, continentes y capitales en el motor de preguntas y Atlas.
-  - Opción manual en la pantalla de Perfil para alternar entre Español e Inglés.
-
 ---
 
 ## ✅ Tareas Completadas
+
+- [x] **Internacionalización y Soporte Multi-idioma Completo (i18n Español / Inglés)**:
+  - Detección automática y reactiva del idioma del dispositivo mediante `expo-localization`.
+  - Contexto global `LanguageContext` con persistencia en AsyncStorage (`@flagspp_language_preference_v1`) y soporte para 3 modalidades: 📱 Sistema, 🇪🇸 Español y 🇬🇧 Inglés.
+  - Selector táctil moderno en la pantalla de Perfil (Ajustes de la Aplicación) para alternar de forma inmediata entre idiomas sin reiniciar la app.
+  - Diccionario completo de textos UI (`translations.ts`) y catálogo bilingüe para los 126 países (`countriesEn.ts`) cubriendo nombres de países, continentes, capitales y datos curiosos.
+  - Traducción dinámica en tiempo real de toda la interfaz:
+    - Barra de navegación inferior (TabBar) y cabeceras.
+    - Pantalla de Perfil, estadísticas, insignias, logros (14 medallas) y modales de respaldo.
+    - Atlas Mundial: buscador por país o capital, tarjetas de países, filtros de continente y ficha de estudio (`CountryStudyModal`).
+    - Modos de Juego (Banderas, Capitales y Blitz): generación de preguntas, distractores de ciudades adaptados, badges de racha, escudos de velocidad, resúmenes de fin de partida y modal de recuento y repaso de fallos (`ReviewAnswersModal`).
 
 - [x] **Modo Estudio / Quiz desde el Atlas (Micro-Desafío por País)**:
   - Botón interactivo *"🎯 Poner a prueba este país"* en la tarjeta de detalle de cada país en el Atlas.
