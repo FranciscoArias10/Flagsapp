@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TabType } from './src/types';
 import { GameProvider, useGame } from './src/context/GameContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
 import { AppleTabBar } from './src/components/AppleTabBar';
 
 import { PlayScreen } from './src/screens/PlayScreen';
@@ -20,6 +21,7 @@ const MainNavigator: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabType>('play');
   const { newAchievementUnlocked, clearAchievementNotification } = useGame();
   const { isDark, colors } = useTheme();
+  const { language, getAchievementInfo } = useLanguage();
 
   // Achievement Banner Animation
   const bannerY = useRef(new Animated.Value(-120)).current;
@@ -103,10 +105,16 @@ const MainNavigator: React.FC = () => {
             </View>
             <View style={styles.bannerTextWrap}>
               <Text style={[styles.bannerPretitle, { color: colors.systemPurple }]}>
-                ¡LOGRO DESBLOQUEADO!
+                {language === 'en' ? 'ACHIEVEMENT UNLOCKED!' : '¡LOGRO DESBLOQUEADO!'}
               </Text>
               <Text style={[styles.bannerTitle, { color: colors.label }]}>
-                {newAchievementUnlocked.title}
+                {
+                  getAchievementInfo(
+                    newAchievementUnlocked.id,
+                    newAchievementUnlocked.title,
+                    newAchievementUnlocked.description
+                  ).title
+                }
               </Text>
             </View>
             <Ionicons name="sparkles" size={18} color={colors.goldStar} />
@@ -121,9 +129,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <GameProvider>
-          <MainNavigator />
-        </GameProvider>
+        <LanguageProvider>
+          <GameProvider>
+            <MainNavigator />
+          </GameProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

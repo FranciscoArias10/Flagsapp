@@ -74,8 +74,11 @@ export interface UserStats {
   hapticsEnabled: boolean;
   fastAnswerOpportunityEnabled?: boolean;
   themePreference?: ThemePreference;
+  languagePreference?: LanguagePreference;
 }
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type SupportedLanguage = 'es' | 'en';
+export type LanguagePreference = 'system' | 'es' | 'en';
 
 export type TabType = 'play' | 'capitals' | 'atlas' | 'profile';

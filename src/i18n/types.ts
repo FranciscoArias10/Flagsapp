@@ -1,0 +1,173 @@
+import { SupportedLanguage, LanguagePreference, Continent } from '../types';
+
+export interface CountryTranslation {
+  name: string;
+  capital: string;
+  fact: string;
+}
+
+export type TranslationKey =
+  // Tab Bar
+  | 'tab_play'
+  | 'tab_atlas'
+  | 'tab_profile'
+
+  // Header & Badges
+  | 'header_category_modes'
+  | 'header_category_library'
+  | 'header_category_user'
+  | 'countries_count'
+  | 'level'
+  | 'xp'
+  | 'streak'
+  | 'best'
+
+  // Home / Play Screen
+  | 'play_title'
+  | 'play_subtitle'
+  | 'play_banner_blitz_badge'
+  | 'play_banner_blitz_title'
+  | 'play_banner_blitz_desc'
+  | 'play_banner_blitz_action'
+  | 'play_section_modes'
+  | 'play_mode_flags_title'
+  | 'play_mode_flags_desc'
+  | 'play_mode_flags_badge'
+  | 'play_mode_capitals_title'
+  | 'play_mode_capitals_desc'
+  | 'play_mode_capitals_badge'
+  | 'play_section_continents'
+  | 'play_global_title'
+  | 'play_global_desc'
+  | 'play_action_play'
+  | 'play_questions_selector_title'
+  | 'play_questions_count_label'
+  | 'play_questions_all'
+
+  // Capitals Difficulty Screen
+  | 'capitals_diff_title'
+  | 'capitals_diff_subtitle'
+  | 'capitals_diff_all_continents'
+  | 'capitals_diff_easy_title'
+  | 'capitals_diff_easy_desc'
+  | 'capitals_diff_medium_title'
+  | 'capitals_diff_medium_desc'
+  | 'capitals_diff_hard_title'
+  | 'capitals_diff_hard_desc'
+  | 'capitals_diff_all_title'
+  | 'capitals_diff_all_desc'
+  | 'capitals_diff_start_action'
+
+  // In-Game (Quiz / Capitals / Blitz)
+  | 'game_question_flag_to_name'
+  | 'game_question_capital'
+  | 'game_question_counter'
+  | 'game_question_blitz_score'
+  | 'game_shield_active'
+  | 'game_shield_used'
+  | 'game_second_chance'
+  | 'game_exit_confirm_title'
+  | 'game_exit_confirm_msg'
+  | 'game_exit_confirm_cancel'
+  | 'game_exit_confirm_exit'
+  | 'game_skip'
+  | 'game_review_mode_badge'
+
+  // Blitz Specific
+  | 'blitz_diff_easy'
+  | 'blitz_diff_medium'
+  | 'blitz_diff_hard'
+  | 'blitz_title'
+  | 'blitz_tagline'
+  | 'blitz_bonus_time'
+
+  // Results Screen
+  | 'results_title_perfect'
+  | 'results_title_great'
+  | 'results_title_good'
+  | 'results_title_practice'
+  | 'results_stat_score'
+  | 'results_stat_accuracy'
+  | 'results_stat_streak'
+  | 'results_stat_xp'
+  | 'results_btn_review_answers'
+  | 'results_btn_retry_mistakes'
+  | 'results_btn_play_again'
+  | 'results_btn_change_diff'
+  | 'results_btn_home'
+
+  // Review Answers Modal
+  | 'review_title'
+  | 'review_btn_practice_mistakes'
+  | 'review_card_fact_title'
+  | 'review_correct_label'
+  | 'review_your_answer_label'
+
+  // Atlas Screen
+  | 'atlas_title'
+  | 'atlas_search_placeholder'
+  | 'atlas_filter_all'
+  | 'atlas_empty_title'
+  | 'atlas_empty_subtitle'
+  | 'atlas_detail_capital'
+  | 'atlas_detail_population'
+  | 'atlas_detail_fact_title'
+  | 'atlas_detail_btn_study'
+  | 'atlas_detail_btn_done'
+  | 'atlas_study_card_title'
+  | 'atlas_study_card_subtitle'
+
+  // Country Study Modal
+  | 'study_badge'
+  | 'study_step_1'
+  | 'study_step_2'
+  | 'study_capital_question'
+  | 'study_flag_question'
+  | 'study_results_complete'
+  | 'study_results_mastered'
+  | 'study_results_good_try'
+  | 'study_results_keep_practicing'
+  | 'study_results_corrects'
+  | 'study_results_xp_earned'
+  | 'study_results_review_sheet'
+  | 'study_btn_practice_again'
+  | 'study_btn_back_atlas'
+
+  // Profile Screen
+  | 'profile_title'
+  | 'profile_nickname_placeholder'
+  | 'profile_nickname_save'
+  | 'profile_nickname_error_empty'
+  | 'profile_stat_answers'
+  | 'profile_stat_accuracy'
+  | 'profile_stat_games'
+  | 'profile_stat_best_streak'
+  | 'profile_stat_highest_blitz'
+  | 'profile_section_achievements'
+  | 'profile_achievements_count'
+  | 'profile_section_settings'
+  | 'profile_setting_theme'
+  | 'profile_setting_language'
+  | 'profile_setting_sound'
+  | 'profile_setting_haptics'
+  | 'profile_setting_speed_shield'
+  | 'profile_setting_speed_shield_desc'
+  | 'profile_lang_system'
+  | 'profile_lang_es'
+  | 'profile_lang_en'
+  | 'profile_theme_system'
+  | 'profile_theme_light'
+  | 'profile_theme_dark'
+  | 'profile_section_backup'
+  | 'profile_backup_export'
+  | 'profile_backup_import'
+  | 'profile_backup_export_success'
+  | 'profile_backup_import_success'
+  | 'profile_backup_invalid'
+  | 'profile_reset_btn'
+  | 'profile_reset_confirm_title'
+  | 'profile_reset_confirm_msg'
+  | 'profile_reset_confirm_action'
+  | 'profile_cancel';
+
+export type TranslationsDictionary = Record<TranslationKey, string>;
