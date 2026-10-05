@@ -25,7 +25,8 @@ import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { useTheme } from '../context/ThemeContext';
-import { ThemePreference } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { ThemePreference, LanguagePreference } from '../types';
 
 const AVATARS = ['🧭', '🦁', '🚀', '🦅', '👑', '⚡', '🌍', '🦊', '🐼', '🐯', '🎯', '🔥'];
 
@@ -34,6 +35,14 @@ export const ProfileScreen: React.FC = () => {
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
   const { stats, achievements, updateProfile, toggleSound, toggleHaptics, toggleFastAnswerOpportunity, resetProgress, exportBackupData, importBackupData } = useGame();
   const { themePreference, isDark, colors, setThemePreference } = useTheme();
+  const {
+    language,
+    languagePreference,
+    setLanguagePreference,
+    t,
+    getCountryName,
+    getAchievementInfo,
+  } = useLanguage();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState(stats.username || 'Explorador');
@@ -178,8 +187,8 @@ export const ProfileScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
       <AppleHeader
-        title="Perfil"
-        category="JUGADOR"
+        title={t('profile_title')}
+        category={t('header_category_user')}
         rightAccessory={
           <Pressable
             onPress={() => {
@@ -202,7 +211,7 @@ export const ProfileScreen: React.FC = () => {
               color={isDark ? "#FFD60A" : "#5856D6"}
             />
             <Text style={[styles.themeToggleBtnText, { color: colors.label }]}>
-              {isDark ? "Claro" : "Oscuro"}
+              {isDark ? (language === 'en' ? "Light" : "Claro") : (language === 'en' ? "Dark" : "Oscuro")}
             </Text>
           </Pressable>
         }
@@ -246,7 +255,7 @@ export const ProfileScreen: React.FC = () => {
                   <View style={[styles.favCountryPill, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
                     <Text style={styles.favCountryEmoji}>{currentFavCountry.flagEmoji}</Text>
                     <Text style={[styles.favCountryName, { color: colors.label }]} numberOfLines={1}>
-                      {currentFavCountry.name}
+                      {getCountryName(currentFavCountry.code, currentFavCountry.name)}
                     </Text>
                   </View>
                 )}
@@ -257,9 +266,17 @@ export const ProfileScreen: React.FC = () => {
           {/* XP Progress */}
           <View style={styles.xpSection}>
             <View style={styles.xpLabelRow}>
-              <Text style={[styles.xpText, { color: colors.label }]}>{stats.xp} XP acumulados</Text>
+              <Text style={[styles.xpText, { color: colors.label }]}>
+                {stats.xp} {language === 'en' ? 'XP accumulated' : 'XP acumulados'}
+              </Text>
               <Text style={[styles.xpNextText, { color: colors.secondaryLabel }]}>
-                {levelInfo.xpToNext > 0 ? `${levelInfo.xpToNext} XP para el sig. nivel` : '¡Nivel Máximo!'}
+                {levelInfo.xpToNext > 0
+                  ? language === 'en'
+                    ? `${levelInfo.xpToNext} XP to next level`
+                    : `${levelInfo.xpToNext} XP para el sig. nivel`
+                  : language === 'en'
+                  ? 'Max Level!'
+                  : '¡Nivel Máximo!'}
               </Text>
             </View>
             <ProgressBar
@@ -272,40 +289,50 @@ export const ProfileScreen: React.FC = () => {
           {/* Edit Profile Quick Button */}
           <Pressable onPress={handleOpenEdit} style={[styles.editProfileBtn, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.18)' : 'rgba(0, 122, 255, 0.08)' }]}>
             <Ionicons name="person-circle-outline" size={16} color={colors.systemBlue} />
-            <Text style={[styles.editProfileBtnText, { color: colors.systemBlue }]}>Personalizar Avatar y Nombre</Text>
+            <Text style={[styles.editProfileBtnText, { color: colors.systemBlue }]}>
+              {language === 'en' ? 'Customize Avatar and Nickname' : 'Personalizar Avatar y Nombre'}
+            </Text>
           </Pressable>
         </AppleCard>
 
         {/* Global Statistics */}
-        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>ESTADÍSTICAS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>
+          {language === 'en' ? 'STATISTICS' : 'ESTADÍSTICAS'}
+        </Text>
         <View style={styles.statsGrid}>
           <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
             <Ionicons name="game-controller" size={24} color={colors.systemBlue} />
             <Text style={[styles.statVal, { color: colors.label }]}>{stats.gamesPlayed}</Text>
-            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Partidas</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>{t('profile_stat_games')}</Text>
           </View>
 
           <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
             <Ionicons name="flame" size={24} color={colors.systemOrange} />
             <Text style={[styles.statVal, { color: colors.systemOrange }]}>{stats.bestStreak}</Text>
-            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Mejor Racha</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>{t('profile_stat_best_streak')}</Text>
           </View>
 
           <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
             <Ionicons name="checkmark-done-circle" size={24} color={colors.systemGreen} />
             <Text style={[styles.statVal, { color: colors.label }]}>{stats.correctAnswers}</Text>
-            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Banderas Acertadas</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>
+              {language === 'en' ? 'Correct Flags' : 'Banderas Acertadas'}
+            </Text>
           </View>
 
           <View style={[styles.statBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
             <Ionicons name="pie-chart" size={24} color={colors.systemPurple} />
             <Text style={[styles.statVal, { color: colors.systemPurple }]}>{accuracy}%</Text>
-            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>Precisión Global</Text>
+            <Text style={[styles.statLbl, { color: colors.secondaryLabel }]}>
+              {language === 'en' ? 'Global Accuracy' : 'Precisión Global'}
+            </Text>
           </View>
         </View>
 
         {/* Cloud & Local Backup */}
-        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>CUENTA Y RESPALDO</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>
+          {t('profile_section_backup')}
+        </Text>
         <AppleCard style={styles.cloudCard} shadowLevel="small">
           <View style={styles.cloudRow}>
             <View style={[styles.cloudIconCircle, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
@@ -313,13 +340,19 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <View style={styles.cloudMeta}>
               <View style={styles.cloudTitleRow}>
-                <Text style={[styles.cloudTitle, { color: colors.label }]}>Respaldo y Restauración</Text>
+                <Text style={[styles.cloudTitle, { color: colors.label }]}>
+                  {language === 'en' ? 'Backup & Restore' : 'Respaldo y Restauración'}
+                </Text>
                 <View style={styles.activeBackupPill}>
-                  <Text style={styles.activeBackupPillText}>DISPONIBLE</Text>
+                  <Text style={styles.activeBackupPillText}>
+                    {language === 'en' ? 'AVAILABLE' : 'DISPONIBLE'}
+                  </Text>
                 </View>
               </View>
               <Text style={[styles.cloudDesc, { color: colors.secondaryLabel }]}>
-                Guarda una copia de tu nivel, XP, avatar y logros en Google Drive, WhatsApp o Notas, o restaura tu progreso en cualquier dispositivo.
+                {language === 'en'
+                  ? 'Save a copy of your level, XP, avatar, and achievements in Google Drive, WhatsApp, or Notes, or restore your progress on any device.'
+                  : 'Guarda una copia de tu nivel, XP, avatar y logros en Google Drive, WhatsApp o Notas, o restaura tu progreso en cualquier dispositivo.'}
               </Text>
             </View>
           </View>
@@ -336,7 +369,9 @@ export const ProfileScreen: React.FC = () => {
             >
               <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.backupBtnPrimaryText}>
-                {isExporting ? 'Generando...' : 'Crear Respaldo'}
+                {isExporting
+                  ? (language === 'en' ? 'Generating...' : 'Generando...')
+                  : (language === 'en' ? 'Create Backup' : 'Crear Respaldo')}
               </Text>
             </Pressable>
 
@@ -349,58 +384,73 @@ export const ProfileScreen: React.FC = () => {
               ]}
             >
               <Ionicons name="cloud-download-outline" size={16} color={colors.systemBlue} style={{ marginRight: 6 }} />
-              <Text style={[styles.backupBtnSecondaryText, { color: colors.systemBlue }]}>Restaurar</Text>
+              <Text style={[styles.backupBtnSecondaryText, { color: colors.systemBlue }]}>
+                {language === 'en' ? 'Restore' : 'Restaurar'}
+              </Text>
             </Pressable>
           </View>
 
           <View style={[styles.storageStatusRow, { borderTopColor: colors.separator }]}>
             <Ionicons name="shield-checkmark" size={14} color={colors.systemGreen} />
-            <Text style={[styles.storageStatusText, { color: colors.systemGreen }]}>Almacenamiento seguro • Respaldable sin costo</Text>
+            <Text style={[styles.storageStatusText, { color: colors.systemGreen }]}>
+              {language === 'en'
+                ? 'Secure storage • Free unlimited backup'
+                : 'Almacenamiento seguro • Respaldable sin costo'}
+            </Text>
           </View>
         </AppleCard>
 
         {/* Achievements Section */}
-        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>LOGROS Y MEDALLAS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>
+          {t('profile_section_achievements')}
+        </Text>
         <View style={styles.achievementsList}>
-          {achievements.map((ach) => (
-            <AppleCard key={ach.id} style={styles.achievementCard}>
-              <View
-                style={[
-                  styles.achievementIconCircle,
-                  { backgroundColor: ach.unlocked ? `${ach.color}25` : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(120, 120, 128, 0.1)' },
-                ]}
-              >
-                <Ionicons
-                  name={ach.icon as any}
-                  size={24}
-                  color={ach.unlocked ? ach.color : colors.tertiaryLabel}
-                />
-              </View>
-
-              <View style={styles.achievementMeta}>
-                <View style={styles.achievementTitleRow}>
-                  <Text
-                    style={[
-                      styles.achievementTitle,
-                      { color: ach.unlocked ? colors.label : colors.secondaryLabel },
-                    ]}
-                  >
-                    {ach.title}
-                  </Text>
-                  {ach.unlocked && (
-                    <View style={styles.unlockedBadge}>
-                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                    </View>
-                  )}
+          {achievements.map((ach) => {
+            const achInfo = getAchievementInfo(ach.id, ach.title, ach.description);
+            return (
+              <AppleCard key={ach.id} style={styles.achievementCard}>
+                <View
+                  style={[
+                    styles.achievementIconCircle,
+                    { backgroundColor: ach.unlocked ? `${ach.color}25` : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(120, 120, 128, 0.1)' },
+                  ]}
+                >
+                  <Ionicons
+                    name={ach.icon as any}
+                    size={24}
+                    color={ach.unlocked ? ach.color : colors.tertiaryLabel}
+                  />
                 </View>
-                <Text style={[styles.achievementDesc, { color: colors.secondaryLabel }]}>{ach.description}</Text>
-              </View>
-            </AppleCard>
-          ))}
+
+                <View style={styles.achievementMeta}>
+                  <View style={styles.achievementTitleRow}>
+                    <Text
+                      style={[
+                        styles.achievementTitle,
+                        { color: ach.unlocked ? colors.label : colors.secondaryLabel },
+                      ]}
+                    >
+                      {achInfo.title}
+                    </Text>
+                    {ach.unlocked && (
+                      <View style={styles.unlockedBadge}>
+                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.achievementDesc, { color: colors.secondaryLabel }]}>
+                    {achInfo.description}
+                  </Text>
+                </View>
+              </AppleCard>
+            );
+          })}
         </View>
 
         {/* Settings */}
-        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>AJUSTES DE LA APLICACIÓN</Text>
+        <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>
+          {t('profile_section_settings')}
+        </Text>
         <AppleCard style={styles.settingsCard}>
           {/* Apariencia / Modo Oscuro */}
           <View style={styles.settingRow}>
@@ -412,13 +462,15 @@ export const ProfileScreen: React.FC = () => {
                 style={{ marginRight: 12 }}
               />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.label }]}>Tema de Apariencia</Text>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>
+                  {t('profile_setting_theme')}
+                </Text>
                 <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
                   {themePreference === 'system'
-                    ? `Automático del Sistema (${isDark ? 'Oscuro activo' : 'Claro activo'})`
+                    ? `${t('profile_theme_system')} (${isDark ? (language === 'en' ? 'Dark active' : 'Oscuro activo') : (language === 'en' ? 'Light active' : 'Claro activo')})`
                     : themePreference === 'dark'
-                    ? 'Modo Oscuro siempre activo'
-                    : 'Modo Claro siempre activo'}
+                    ? (language === 'en' ? 'Dark Mode always active' : 'Modo Oscuro siempre activo')
+                    : (language === 'en' ? 'Light Mode always active' : 'Modo Claro siempre activo')}
                 </Text>
               </View>
             </View>
@@ -426,7 +478,7 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={{ paddingHorizontal: 12, paddingBottom: 10, paddingTop: 4 }}>
             <SegmentedControl
-              values={['📱 Sistema', '☀️ Claro', '🌙 Oscuro']}
+              values={['📱 ' + t('profile_theme_system'), '☀️ ' + t('profile_theme_light'), '🌙 ' + t('profile_theme_dark')]}
               selectedIndex={themePreference === 'system' ? 0 : themePreference === 'light' ? 1 : 2}
               onChange={(index) => {
                 const prefs: ThemePreference[] = ['system', 'light', 'dark'];
@@ -437,10 +489,49 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
+          {/* Idioma / Language */}
+          <View style={styles.settingRow}>
+            <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
+              <Ionicons
+                name="globe-outline"
+                size={22}
+                color={colors.systemBlue}
+                style={{ marginRight: 12 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>
+                  {t('profile_setting_language')}
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
+                  {languagePreference === 'system'
+                    ? `${t('profile_lang_system')} (${language === 'en' ? 'English' : 'Español'})`
+                    : languagePreference === 'en'
+                    ? 'English'
+                    : 'Español'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 12, paddingBottom: 10, paddingTop: 4 }}>
+            <SegmentedControl
+              values={['📱 ' + t('profile_lang_system'), '🇪🇸 ' + t('profile_lang_es'), '🇺🇸 ' + t('profile_lang_en')]}
+              selectedIndex={languagePreference === 'system' ? 0 : languagePreference === 'es' ? 1 : 2}
+              onChange={(index) => {
+                const prefs: LanguagePreference[] = ['system', 'es', 'en'];
+                setLanguagePreference(prefs[index]);
+              }}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
           <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
               <Ionicons name="volume-high" size={22} color={colors.systemBlue} style={{ marginRight: 12 }} />
-              <Text style={[styles.settingTitle, { color: colors.label }]}>Efectos de Sonido</Text>
+              <Text style={[styles.settingTitle, { color: colors.label }]}>
+                {t('profile_setting_sound')}
+              </Text>
             </View>
             <Switch
               value={stats.soundEnabled}
@@ -454,7 +545,9 @@ export const ProfileScreen: React.FC = () => {
           <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
               <Ionicons name="hardware-chip" size={22} color={colors.systemPurple} style={{ marginRight: 12 }} />
-              <Text style={[styles.settingTitle, { color: colors.label }]}>Vibración Háptica (iOS)</Text>
+              <Text style={[styles.settingTitle, { color: colors.label }]}>
+                {t('profile_setting_haptics')}
+              </Text>
             </View>
             <Switch
               value={stats.hapticsEnabled}
@@ -469,9 +562,11 @@ export const ProfileScreen: React.FC = () => {
             <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
               <Ionicons name="flash" size={22} color={colors.systemOrange} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.settingTitle, { color: colors.label }]}>Segunda Oportunidad Veloz</Text>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>
+                  {t('profile_setting_speed_shield')}
+                </Text>
                 <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
-                  Gana un escudo de perdón al responder en &lt; 2.5s. Desactívalo para el modo clásico sin ayudas.
+                  {t('profile_setting_speed_shield_desc')}
                 </Text>
               </View>
             </View>
@@ -485,7 +580,7 @@ export const ProfileScreen: React.FC = () => {
 
         <View style={styles.resetContainer}>
           <AppleButton
-            title="Reiniciar Progreso"
+            title={t('profile_reset_btn')}
             onPress={handleReset}
             variant="danger"
             size="medium"
@@ -503,11 +598,15 @@ export const ProfileScreen: React.FC = () => {
         <View style={[styles.modalContainer, { backgroundColor: colors.systemBackground, paddingTop: Platform.OS === 'android' ? topInset : 16 }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.separator }]}>
             <Pressable onPress={() => setShowEditModal(false)} hitSlop={10}>
-              <Text style={styles.modalCancelText}>Cancelar</Text>
+              <Text style={styles.modalCancelText}>{t('profile_cancel')}</Text>
             </Pressable>
-            <Text style={[styles.modalTitle, { color: colors.label }]}>Editar Perfil</Text>
+            <Text style={[styles.modalTitle, { color: colors.label }]}>
+              {language === 'en' ? 'Edit Profile' : 'Editar Perfil'}
+            </Text>
             <Pressable onPress={handleSaveEdit} hitSlop={10}>
-              <Text style={[styles.modalDoneText, { color: colors.systemBlue }]}>Guardar</Text>
+              <Text style={[styles.modalDoneText, { color: colors.systemBlue }]}>
+                {t('profile_nickname_save')}
+              </Text>
             </Pressable>
           </View>
 
@@ -521,14 +620,20 @@ export const ProfileScreen: React.FC = () => {
               <View style={styles.modalAvatarBig}>
                 <Text style={styles.modalAvatarBigEmoji}>{editAvatar}</Text>
               </View>
-              <Text style={styles.modalAvatarHelp}>Toca un avatar abajo para seleccionarlo</Text>
+              <Text style={styles.modalAvatarHelp}>
+                {language === 'en' ? 'Tap an avatar below to select it' : 'Toca un avatar abajo para seleccionarlo'}
+              </Text>
             </View>
 
             {/* Nickname Input */}
             <View style={styles.inputLabelRow}>
-              <Text style={styles.modalSectionLabel}>NOMBRE DE EXPLORADOR *</Text>
+              <Text style={styles.modalSectionLabel}>
+                {language === 'en' ? 'EXPLORER NAME *' : 'NOMBRE DE EXPLORADOR *'}
+              </Text>
               <View style={styles.mandatoryBadge}>
-                <Text style={styles.mandatoryBadgeText}>Obligatorio</Text>
+                <Text style={styles.mandatoryBadgeText}>
+                  {language === 'en' ? 'Required' : 'Obligatorio'}
+                </Text>
               </View>
             </View>
 
@@ -547,7 +652,7 @@ export const ProfileScreen: React.FC = () => {
                     setUsernameError(null);
                   }
                 }}
-                placeholder="Escribe tu apodo..."
+                placeholder={t('profile_nickname_placeholder')}
                 placeholderTextColor={colors.tertiaryLabel}
                 maxLength={18}
                 style={[styles.modalInput, { color: colors.label }]}
@@ -557,7 +662,7 @@ export const ProfileScreen: React.FC = () => {
                 <Pressable
                   onPress={() => {
                     setEditUsername('');
-                    setUsernameError('El nombre o apodo es obligatorio.');
+                    setUsernameError(language === 'en' ? 'Nickname is required.' : 'El nombre o apodo es obligatorio.');
                   }}
                   hitSlop={8}
                 >
@@ -574,7 +679,9 @@ export const ProfileScreen: React.FC = () => {
             )}
 
             {/* Avatar Selector Grid */}
-            <Text style={styles.modalSectionLabel}>ELIGE TU AVATAR</Text>
+            <Text style={styles.modalSectionLabel}>
+              {language === 'en' ? 'CHOOSE YOUR AVATAR' : 'ELIGE TU AVATAR'}
+            </Text>
             <View style={styles.avatarGrid}>
               {AVATARS.map((av) => {
                 const isSelected = editAvatar === av;
@@ -603,12 +710,14 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Favorite Country / Flag */}
             <View style={styles.countryHeaderRow}>
-              <Text style={[styles.modalSectionLabel, { color: colors.secondaryLabel }]}>PAÍS O BANDERA FAVORITA</Text>
+              <Text style={[styles.modalSectionLabel, { color: colors.secondaryLabel }]}>
+                {language === 'en' ? 'FAVORITE COUNTRY OR FLAG' : 'PAÍS O BANDERA FAVORITA'}
+              </Text>
               {selectedEditCountry && (
                 <View style={[styles.selectedCountryPill, { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)' }]}>
                   <Text style={styles.selectedCountryPillFlag}>{selectedEditCountry.flagEmoji}</Text>
                   <Text style={[styles.selectedCountryPillText, { color: colors.systemBlue }]} numberOfLines={1}>
-                    {selectedEditCountry.name}
+                    {getCountryName(selectedEditCountry.code, selectedEditCountry.name)}
                   </Text>
                 </View>
               )}
@@ -619,7 +728,7 @@ export const ProfileScreen: React.FC = () => {
               <TextInput
                 value={countrySearch}
                 onChangeText={setCountrySearch}
-                placeholder="Buscar país..."
+                placeholder={language === 'en' ? 'Search country...' : 'Buscar país...'}
                 placeholderTextColor={colors.tertiaryLabel}
                 style={[styles.countrySearchInput, { color: colors.label }]}
                 autoCorrect={false}
@@ -634,7 +743,11 @@ export const ProfileScreen: React.FC = () => {
             {filteredCountries.length === 0 ? (
               <View style={styles.emptySearchWrap}>
                 <Ionicons name="search-outline" size={28} color={IOSColors.tertiaryLabel} />
-                <Text style={styles.emptySearchText}>No se encontraron países para "{countrySearch}"</Text>
+                <Text style={styles.emptySearchText}>
+                  {language === 'en'
+                    ? `No countries found for "${countrySearch}"`
+                    : `No se encontraron países para "${countrySearch}"`}
+                </Text>
               </View>
             ) : (
               <View style={styles.countriesGrid}>
@@ -659,7 +772,7 @@ export const ProfileScreen: React.FC = () => {
                           isSelected && styles.countryChipNameSelected,
                         ]}
                       >
-                        {c.name}
+                        {getCountryName(c.code, c.name)}
                       </Text>
                     </Pressable>
                   );
@@ -668,7 +781,7 @@ export const ProfileScreen: React.FC = () => {
             )}
 
             <AppleButton
-              title="Guardar Cambios"
+              title={language === 'en' ? 'Save Changes' : 'Guardar Cambios'}
               onPress={handleSaveEdit}
               variant="gradient"
               style={{ marginTop: 28, width: '100%' }}
@@ -687,9 +800,11 @@ export const ProfileScreen: React.FC = () => {
         <View style={[styles.modalContainer, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.separator }]}>
             <Pressable onPress={() => setShowRestoreModal(false)} hitSlop={10}>
-              <Text style={styles.modalCancelText}>Cancelar</Text>
+              <Text style={styles.modalCancelText}>{t('profile_cancel')}</Text>
             </Pressable>
-            <Text style={[styles.modalTitle, { color: colors.label }]}>Restaurar Datos</Text>
+            <Text style={[styles.modalTitle, { color: colors.label }]}>
+              {language === 'en' ? 'Restore Data' : 'Restaurar Datos'}
+            </Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -701,9 +816,13 @@ export const ProfileScreen: React.FC = () => {
               <View style={styles.restoreIconCircleBig}>
                 <Ionicons name="cloud-download" size={36} color={colors.systemBlue} />
               </View>
-              <Text style={[styles.restorePromptTitle, { color: colors.label }]}>Recupera tu Progreso</Text>
+              <Text style={[styles.restorePromptTitle, { color: colors.label }]}>
+                {language === 'en' ? 'Recover Your Progress' : 'Recupera tu Progreso'}
+              </Text>
               <Text style={[styles.restorePromptSub, { color: colors.secondaryLabel }]}>
-                Pega a continuación el texto o JSON del respaldo que guardaste previamente:
+                {language === 'en'
+                  ? 'Paste below the JSON or text from the backup you previously saved:'
+                  : 'Pega a continuación el texto o JSON del respaldo que guardaste previamente:'}
               </Text>
             </View>
 
@@ -713,7 +832,11 @@ export const ProfileScreen: React.FC = () => {
                 setRestoreInputText(txt);
                 if (restoreError) setRestoreError(null);
               }}
-              placeholder='Pega aquí el código JSON del respaldo (ej: {"app":"Flags++", ...})'
+              placeholder={
+                language === 'en'
+                  ? 'Paste backup JSON here (e.g. {"app":"Flags++", ...})'
+                  : 'Pega aquí el código JSON del respaldo (ej: {"app":"Flags++", ...})'
+              }
               placeholderTextColor={colors.tertiaryLabel}
               multiline
               numberOfLines={6}
@@ -732,7 +855,9 @@ export const ProfileScreen: React.FC = () => {
                 style={styles.clearRestoreBtn}
               >
                 <Ionicons name="trash-outline" size={14} color={IOSColors.secondaryLabel} />
-                <Text style={styles.clearRestoreBtnText}>Limpiar texto</Text>
+                <Text style={styles.clearRestoreBtnText}>
+                  {language === 'en' ? 'Clear text' : 'Limpiar texto'}
+                </Text>
               </Pressable>
             )}
 
@@ -744,7 +869,7 @@ export const ProfileScreen: React.FC = () => {
             )}
 
             <AppleButton
-              title="Validar y Restaurar"
+              title={language === 'en' ? 'Validate & Restore' : 'Validar y Restaurar'}
               onPress={handleConfirmRestore}
               variant="gradient"
               style={{ marginTop: 24, width: '100%' }}
