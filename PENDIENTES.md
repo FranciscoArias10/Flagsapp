@@ -6,9 +6,12 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
-- [ ] **Modo Manos Libres y Respuesta por Voz (Paso 2: STT y Micrófono Abierto)**:
-  - Integración de reconocimiento de voz en streaming (`expo-speech-recognition`) para responder por micrófono sin tocar la pantalla con validación fonética instantánea.
-  - Requiere Development Build (`npx expo run:android` / EAS Build).
+- [ ] **Modo Manos Libres y Respuesta por Voz con Micrófono Abierto (STT en Streaming)**:
+  - **Concepto**: Permitir que el jugador responda hablando en voz alta (ej. *"Quito"*, *"Bogotá"*, *"Tokio"*) de manera ultra-rápida sin necesidad de tocar la pantalla.
+  - **Micrófono Abierto Continuo**: Escucha activa en streaming (`continuous: true`, `interimResults: true`) mediante `expo-speech-recognition` para que el jugador pueda responder en cualquier milisegundo apenas vea o escuche la pregunta.
+  - **Validación Fonética y Normalización Ultra-Rápida**: Normalización de texto (remoción de tildes, minúsculas, eliminación de ruido y prefijos como *"es quito"* o *"creo que quito"* ➔ detecta *"quito"* en menos de 100ms).
+  - **Cancelación de Auto-interferencia (Barge-In)**: Silenciado instantáneo (`Speech.stop()`) del locutor de preguntas en el momento exacto en que el micrófono detecta el inicio de la voz del jugador para evitar acople acústico con el altavoz.
+  - **Requisito Técnico**: Requiere Development Build (`npx expo run:android` / EAS Build) para habilitar las APIs nativas de audio y reconocimiento de Android/iOS.
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto) mediante chips interactivos en el Atlas.
 
@@ -20,6 +23,10 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## ✅ Tareas Completadas
 
+- [x] **Corrección de Modo Oscuro en Modal de Recuento de Respuestas (`ReviewAnswersModal`)**:
+  - Solucionado el problema visual donde la cabecera superior y la barra de filtros conservaban un fondo blanco rígido (`#FFFFFF`), provocando que el título quedara invisible por contraste blanco sobre blanco.
+  - Adaptación semántica completa a `colors.cardBackground` y `colors.separator`.
+  - Píldoras de filtro adaptables en Dark Mode (Aciertos en verde esmeralda translúcido, Fallos en carmesí sutil y Todos en azul zafiro con bordes reactivos).
 - [x] **Voz del Locutor y Lectura de Preguntas (Paso 1: TTS con `expo-speech`)**:
   - Integración de `expo-speech` optimizada para Expo SDK 57 y 100% compatible con Expo Go.
   - Servicio `speechService` con pronunciación bilingüe (`es-ES` y `en-US`), cadencia rápida (`rate: 1.1x`), y cancelación inmediata (`Speech.stop()`) al responder, salir o agotar tiempo.
