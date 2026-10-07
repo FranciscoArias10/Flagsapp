@@ -73,6 +73,7 @@ export interface UserStats {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
   fastAnswerOpportunityEnabled?: boolean;
+  voiceAnnouncerEnabled?: boolean;
   themePreference?: ThemePreference;
   languagePreference?: LanguagePreference;
 }

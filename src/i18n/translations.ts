@@ -300,6 +300,12 @@ export const TRANSLATIONS_ES: TranslationsDictionary = {
   review_label_correct_was: 'Era:',
   review_btn_retry_wrong: '🔁 Repasar los {count} Fallos',
   review_btn_back_results: 'Volver a Resultados',
+
+  // Voice Announcer
+  profile_setting_voice: 'Voz del Locutor',
+  profile_setting_voice_desc: 'Lee en voz alta las preguntas y países durante la partida',
+  game_voice_tooltip_on: 'Voz activada',
+  game_voice_tooltip_off: 'Voz desactivada',
 };
 
 export const TRANSLATIONS_EN: TranslationsDictionary = {
@@ -601,6 +607,12 @@ export const TRANSLATIONS_EN: TranslationsDictionary = {
   review_label_correct_was: 'Correct was:',
   review_btn_retry_wrong: '🔁 Review the {count} Mistakes',
   review_btn_back_results: 'Back to Results',
+
+  // Voice Announcer
+  profile_setting_voice: 'Voice Announcer',
+  profile_setting_voice_desc: 'Read questions and countries aloud during gameplay',
+  game_voice_tooltip_on: 'Voice enabled',
+  game_voice_tooltip_off: 'Voice disabled',
 };
 
 export const CONTINENT_TRANSLATIONS: Record<string, { es: string; en: string }> = {

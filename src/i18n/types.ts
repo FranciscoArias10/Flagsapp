@@ -304,7 +304,13 @@ export type TranslationKey =
   | 'review_label_you_chose'
   | 'review_label_correct_was'
   | 'review_btn_retry_wrong'
-  | 'review_btn_back_results';
+  | 'review_btn_back_results'
+
+  // Voice Announcer Keys
+  | 'profile_setting_voice'
+  | 'profile_setting_voice_desc'
+  | 'game_voice_tooltip_on'
+  | 'game_voice_tooltip_off';
 
 export type TranslationsDictionary = Record<TranslationKey, string>;
 

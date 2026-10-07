@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserStats, Achievement, QuizResult } from '../types';
 import { INITIAL_ACHIEVEMENTS } from '../data/achievements';
 import { soundService } from '../utils/soundHelper';
+import { speechService } from '../utils/speechHelper';
 
 const STORAGE_KEY = '@flagspp_user_stats_v1';
 const ACHIEVEMENTS_KEY = '@flagspp_achievements_v1';
@@ -62,6 +63,7 @@ const INITIAL_STATS: UserStats = {
   soundEnabled: true,
   hapticsEnabled: true,
   fastAnswerOpportunityEnabled: true,
+  voiceAnnouncerEnabled: false,
 };
 
 interface GameContextType {
@@ -75,6 +77,7 @@ interface GameContextType {
   toggleSound: () => void;
   toggleHaptics: () => void;
   toggleFastAnswerOpportunity: () => void;
+  toggleVoiceAnnouncer: () => void;
   resetProgress: () => Promise<void>;
   exportBackupData: () => Promise<string>;
   importBackupData: (backupJson: string) => Promise<{ success: boolean; message: string }>;
@@ -104,6 +107,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (parsed.fastAnswerOpportunityEnabled === undefined) {
           parsed.fastAnswerOpportunityEnabled = true;
         }
+        if (parsed.voiceAnnouncerEnabled === undefined) {
+          parsed.voiceAnnouncerEnabled = false;
+        }
         // Self-heal gamesPlayed if it was 0 or undercounted compared to total answers
         if (parsed.totalAnswers > 0) {
           const estimatedMinGames = Math.ceil(parsed.totalAnswers / 12);
@@ -113,6 +119,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setStats(parsed);
         soundService.setPreferences(parsed.soundEnabled, parsed.hapticsEnabled);
+        speechService.setEnabled(Boolean(parsed.voiceAnnouncerEnabled));
       }
       if (savedAchievements) {
         const parsedAch: Achievement[] = JSON.parse(savedAchievements);
@@ -372,6 +379,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const toggleVoiceAnnouncer = () => {
+    setStats((prev) => {
+      const updated = {
+        ...prev,
+        voiceAnnouncerEnabled: !prev.voiceAnnouncerEnabled,
+      };
+      speechService.setEnabled(Boolean(updated.voiceAnnouncerEnabled));
+      persistData(updated, achievements);
+      return updated;
+    });
+  };
+
   const updateProfile = async (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => {
     setStats((prev) => {
       const updated = {
@@ -454,6 +473,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleSound,
         toggleHaptics,
         toggleFastAnswerOpportunity,
+        toggleVoiceAnnouncer,
         resetProgress,
         exportBackupData,
         importBackupData,
