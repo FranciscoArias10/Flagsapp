@@ -16,6 +16,7 @@ import { generateQuizQuestions, generateQuizQuestionsFromCountries, calculateSta
 import { COUNTRIES } from '../data/countries';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
+import { speechService } from '../utils/speechHelper';
 import { FlagImage } from '../components/FlagImage';
 import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
@@ -41,9 +42,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats, toggleVoiceAnnouncer } = useGame();
   const { isDark, colors } = useTheme();
-  const { t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
+  const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
 
   const [questionCount, setQuestionCount] = useState<number | 'all'>(initialQuestionCount);
@@ -143,6 +144,23 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       soundService.triggerCountdownTick();
     }
   }, [timeLeft, isAnswered, questions.length, showSummary]);
+
+  // Voice announcer effect
+  useEffect(() => {
+    if (!showSummary && !isAnswered && questions[currentIndex] && stats.voiceAnnouncerEnabled) {
+      speechService.speak(t('quiz_which_country'), language);
+    }
+    return () => {
+      speechService.stop();
+    };
+  }, [currentIndex, showSummary, isAnswered, language, stats.voiceAnnouncerEnabled]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      speechService.stop();
+    };
+  }, []);
 
   const startNewGame = (countParam = questionCount, timeParam = questionTimeLimit) => {
     if (autoAdvanceTimer.current) {
@@ -248,6 +266,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   };
 
   const handleTimeout = () => {
+    speechService.stop();
     if (isAnswered) return;
     setIsAnswered(true);
     setSelectedOptionIndex(null);
@@ -299,6 +318,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
   const handleSelectOption = (index: number) => {
     if (isAnswered || eliminatedOptions.includes(index)) return;
+    speechService.stop();
 
     const currentQ = questions[currentIndex];
     const isCorrect = index === currentQ.correctOptionIndex;
@@ -638,6 +658,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 
   const handleCloseQuiz = () => {
     soundService.triggerLightTap();
+    speechService.stop();
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
     if (questionTimerRef.current) clearInterval(questionTimerRef.current);
 
@@ -743,7 +764,38 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             },
           ]}
         >
-          <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>{t('quiz_which_country')}</Text>
+          <View style={styles.promptRow}>
+            <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>{t('quiz_which_country')}</Text>
+            <Pressable
+              onPress={() => {
+                toggleVoiceAnnouncer();
+                if (!stats.voiceAnnouncerEnabled && currentQ) {
+                  speechService.setEnabled(true);
+                  speechService.speak(t('quiz_which_country'), language);
+                } else {
+                  speechService.stop();
+                }
+              }}
+              style={[
+                styles.voiceQuickBtn,
+                stats.voiceAnnouncerEnabled && styles.voiceQuickBtnActive,
+                {
+                  backgroundColor: stats.voiceAnnouncerEnabled
+                    ? 'rgba(52, 199, 89, 0.15)'
+                    : isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                },
+              ]}
+              hitSlop={10}
+            >
+              <Ionicons
+                name={stats.voiceAnnouncerEnabled ? 'volume-high' : 'volume-mute-outline'}
+                size={18}
+                color={stats.voiceAnnouncerEnabled ? colors.systemGreen : colors.tertiaryLabel}
+              />
+            </Pressable>
+          </View>
 
           <View style={styles.flagWrap}>
             <FlagImage
@@ -1088,12 +1140,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...IOSColors.cardShadow,
   },
+  promptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 14,
+  },
   promptText: {
     fontSize: 17,
     fontWeight: '600',
     color: IOSColors.secondaryLabel,
-    marginBottom: 16,
+    flex: 1,
+    paddingRight: 8,
     textAlign: 'center',
+  },
+  voiceQuickBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceQuickBtnActive: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(52, 199, 89, 0.4)',
   },
   flagWrap: {
     marginBottom: 14,

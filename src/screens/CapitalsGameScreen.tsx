@@ -18,6 +18,7 @@ import { COUNTRY_CITIES } from '../data/countryCities';
 import { calculateStars, calculateXpEarned } from '../utils/quizGenerator';
 import { IOSColors } from '../utils/colors';
 import { soundService } from '../utils/soundHelper';
+import { speechService } from '../utils/speechHelper';
 import { FlagImage } from '../components/FlagImage';
 import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
@@ -131,9 +132,9 @@ const askedCapitalsHistory: Map<string, Set<string>> = new Map();
 export const CapitalsGameScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordGameStart, recordQuizResult, stats } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats, toggleVoiceAnnouncer } = useGame();
   const { isDark, colors } = useTheme();
-  const { t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
+  const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
 
   const getDiffConfig = (diff: CapitalDifficultyConfig): CapitalDifficultyConfig => {
@@ -234,6 +235,31 @@ export const CapitalsGameScreen: React.FC = () => {
       soundService.triggerCountdownTick();
     }
   }, [timeLeft, isAnswered, screenMode, questions.length, showSummary]);
+
+  // Voice Announcer effect: read the capital question aloud when enabled
+  useEffect(() => {
+    if (
+      screenMode === 'playing' &&
+      !showSummary &&
+      !isAnswered &&
+      questions[currentIndex] &&
+      stats.voiceAnnouncerEnabled
+    ) {
+      const q = questions[currentIndex];
+      const countryName = getCountryName(q.country);
+      speechService.speakCapitalQuestion(countryName, language);
+    }
+    return () => {
+      speechService.stop();
+    };
+  }, [currentIndex, screenMode, showSummary, isAnswered, language, stats.voiceAnnouncerEnabled]);
+
+  // Stop speech on unmount
+  useEffect(() => {
+    return () => {
+      speechService.stop();
+    };
+  }, []);
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
@@ -436,6 +462,7 @@ export const CapitalsGameScreen: React.FC = () => {
   };
 
   const handleTimeout = () => {
+    speechService.stop();
     if (isAnswered) return;
     setIsAnswered(true);
     setSelectedCapital(null);
@@ -485,6 +512,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const handleSelectCapital = (cap: string) => {
     if (isAnswered || eliminatedCapitals.includes(cap)) return;
+    speechService.stop();
 
     const currentQ = questions[currentIndex];
     const isCorrect = cap === currentQ.correctCapital;
@@ -647,6 +675,7 @@ export const CapitalsGameScreen: React.FC = () => {
 
   const handleBackToDifficulty = () => {
     soundService.triggerLightTap();
+    speechService.stop();
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
     if (questionTimerRef.current) clearInterval(questionTimerRef.current);
 
@@ -1076,9 +1105,40 @@ export const CapitalsGameScreen: React.FC = () => {
             colors.cardShadow,
           ]}
         >
-          <Text style={[styles.questionSubtitle, { color: colors.secondaryLabel }]}>
-            {t('capitals_which_capital', { country: getCountryName(currentQ.country) })}
-          </Text>
+          <View style={styles.countryHeaderTopRow}>
+            <Text style={[styles.questionSubtitle, { color: colors.secondaryLabel }]}>
+              {t('capitals_which_capital', { country: getCountryName(currentQ.country) })}
+            </Text>
+            <Pressable
+              onPress={() => {
+                toggleVoiceAnnouncer();
+                if (!stats.voiceAnnouncerEnabled && currentQ) {
+                  speechService.setEnabled(true);
+                  speechService.speakCapitalQuestion(getCountryName(currentQ.country), language);
+                } else {
+                  speechService.stop();
+                }
+              }}
+              style={[
+                styles.voiceQuickBtn,
+                stats.voiceAnnouncerEnabled && styles.voiceQuickBtnActive,
+                {
+                  backgroundColor: stats.voiceAnnouncerEnabled
+                    ? 'rgba(52, 199, 89, 0.15)'
+                    : isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                },
+              ]}
+              hitSlop={10}
+            >
+              <Ionicons
+                name={stats.voiceAnnouncerEnabled ? 'volume-high' : 'volume-mute-outline'}
+                size={18}
+                color={stats.voiceAnnouncerEnabled ? colors.systemGreen : colors.tertiaryLabel}
+              />
+            </Pressable>
+          </View>
           <Text style={[styles.countryName, { color: colors.label }]}>{getCountryName(currentQ.country)}</Text>
 
           <View style={styles.flagContainer}>
@@ -1436,11 +1496,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...IOSColors.cardShadow,
   },
+  countryHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 6,
+  },
   questionSubtitle: {
     fontSize: 15,
     fontWeight: '600',
     color: IOSColors.secondaryLabel,
-    marginBottom: 4,
+    flex: 1,
+    paddingRight: 8,
+  },
+  voiceQuickBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceQuickBtnActive: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(52, 199, 89, 0.4)',
   },
   countryName: {
     fontSize: 28,
