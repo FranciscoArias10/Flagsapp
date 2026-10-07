@@ -71,7 +71,7 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
     >
       <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: Platform.OS === 'android' ? topInset : 12 }]}>
         {/* Modal Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.cardBackground, borderBottomColor: colors.separator }]}>
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.title, { color: colors.label }]}>{displayTitle}</Text>
             <Text style={[styles.subtitle, { color: colors.secondaryLabel }]}>
@@ -84,17 +84,26 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
         </View>
 
         {/* Quick Summary Pill Bar */}
-        <View style={styles.summaryBar}>
+        <View style={[styles.summaryBar, { backgroundColor: colors.cardBackground, borderBottomColor: colors.separator }]}>
           <Pressable
             onPress={() => handleFilterChange('correct')}
             style={[
               styles.summaryPill,
-              styles.summaryPillGreen,
-              filter === 'correct' && styles.summaryPillActiveGreen,
+              {
+                backgroundColor:
+                  filter === 'correct'
+                    ? isDark
+                      ? 'rgba(48, 209, 88, 0.26)'
+                      : 'rgba(52, 199, 89, 0.18)'
+                    : isDark
+                    ? 'rgba(48, 209, 88, 0.12)'
+                    : 'rgba(52, 199, 89, 0.1)',
+                borderColor: filter === 'correct' ? colors.systemGreen : 'transparent',
+              },
             ]}
           >
-            <Ionicons name="checkmark-circle" size={16} color={IOSColors.systemGreen} />
-            <Text style={[styles.summaryPillText, { color: IOSColors.systemGreen }]}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.systemGreen} />
+            <Text style={[styles.summaryPillText, { color: colors.systemGreen }]}>
               {t('review_filter_hits', { count: correctCount })}
             </Text>
           </Pressable>
@@ -103,12 +112,21 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
             onPress={() => handleFilterChange('wrong')}
             style={[
               styles.summaryPill,
-              styles.summaryPillRed,
-              filter === 'wrong' && styles.summaryPillActiveRed,
+              {
+                backgroundColor:
+                  filter === 'wrong'
+                    ? isDark
+                      ? 'rgba(255, 69, 58, 0.26)'
+                      : 'rgba(255, 59, 48, 0.18)'
+                    : isDark
+                    ? 'rgba(255, 69, 58, 0.12)'
+                    : 'rgba(255, 59, 48, 0.1)',
+                borderColor: filter === 'wrong' ? colors.systemRed : 'transparent',
+              },
             ]}
           >
-            <Ionicons name="close-circle" size={16} color={IOSColors.systemRed} />
-            <Text style={[styles.summaryPillText, { color: IOSColors.systemRed }]}>
+            <Ionicons name="close-circle" size={16} color={colors.systemRed} />
+            <Text style={[styles.summaryPillText, { color: colors.systemRed }]}>
               {t('review_filter_misses', { count: wrongCount })}
             </Text>
           </Pressable>
@@ -117,12 +135,21 @@ export const ReviewAnswersModal: React.FC<ReviewAnswersModalProps> = ({
             onPress={() => handleFilterChange('all')}
             style={[
               styles.summaryPill,
-              styles.summaryPillNeutral,
-              filter === 'all' && styles.summaryPillActiveNeutral,
+              {
+                backgroundColor:
+                  filter === 'all'
+                    ? isDark
+                      ? 'rgba(10, 132, 255, 0.26)'
+                      : 'rgba(0, 122, 255, 0.16)'
+                    : isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 122, 255, 0.08)',
+                borderColor: filter === 'all' ? colors.systemBlue : 'transparent',
+              },
             ]}
           >
-            <Ionicons name="list" size={16} color={IOSColors.systemBlue} />
-            <Text style={[styles.summaryPillText, { color: IOSColors.systemBlue }]}>
+            <Ionicons name="list" size={16} color={colors.systemBlue} />
+            <Text style={[styles.summaryPillText, { color: colors.systemBlue }]}>
               {t('review_filter_all', { count: items.length })}
             </Text>
           </Pressable>
@@ -289,9 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
   },
   headerTitleWrap: {
     flex: 1,
@@ -316,10 +341,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
     gap: 8,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(60, 60, 67, 0.08)',
   },
   summaryPill: {
     flex: 1,
