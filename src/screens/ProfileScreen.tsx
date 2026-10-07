@@ -33,7 +33,7 @@ const AVATARS = ['🧭', '🦁', '🚀', '🦅', '👑', '⚡', '🌍', '🦊', 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, toggleFastAnswerOpportunity, resetProgress, exportBackupData, importBackupData } = useGame();
+  const { stats, achievements, updateProfile, toggleSound, toggleHaptics, toggleFastAnswerOpportunity, toggleVoiceAnnouncer, resetProgress, exportBackupData, importBackupData } = useGame();
   const { themePreference, isDark, colors, setThemePreference } = useTheme();
   const {
     language,
@@ -573,6 +573,27 @@ export const ProfileScreen: React.FC = () => {
             <Switch
               value={stats.fastAnswerOpportunityEnabled !== false}
               onValueChange={toggleFastAnswerOpportunity}
+              trackColor={{ false: isDark ? '#38383A' : '#E5E5EA', true: colors.systemGreen }}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
+          <View style={styles.settingRow}>
+            <View style={[styles.settingLabelWrap, { flex: 1, paddingRight: 10 }]}>
+              <Ionicons name="mic" size={22} color={colors.systemGreen} style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingTitle, { color: colors.label }]}>
+                  {t('profile_setting_voice')}
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: colors.secondaryLabel }]}>
+                  {t('profile_setting_voice_desc')}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={Boolean(stats.voiceAnnouncerEnabled)}
+              onValueChange={toggleVoiceAnnouncer}
               trackColor={{ false: isDark ? '#38383A' : '#E5E5EA', true: colors.systemGreen }}
             />
           </View>
