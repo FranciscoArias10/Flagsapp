@@ -6,6 +6,9 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
+- [ ] **Modo Manos Libres y Respuesta por Voz (Paso 2: STT y Micrófono Abierto)**:
+  - Integración de reconocimiento de voz en streaming (`expo-speech-recognition`) para responder por micrófono sin tocar la pantalla con validación fonética instantánea.
+  - Requiere Development Build (`npx expo run:android` / EAS Build).
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto) mediante chips interactivos en el Atlas.
 
@@ -16,6 +19,12 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ---
 
 ## ✅ Tareas Completadas
+
+- [x] **Voz del Locutor y Lectura de Preguntas (Paso 1: TTS con `expo-speech`)**:
+  - Integración de `expo-speech` optimizada para Expo SDK 57 y 100% compatible con Expo Go.
+  - Servicio `speechService` con pronunciación bilingüe (`es-ES` y `en-US`), cadencia rápida (`rate: 1.1x`), y cancelación inmediata (`Speech.stop()`) al responder, salir o agotar tiempo.
+  - Conmutador en **Perfil > Ajustes de la Aplicación** (`stats.voiceAnnouncerEnabled`) con sincronización reactiva en `GameContext`.
+  - Botón interactivo de altavoz en la tarjeta de pregunta de **Modo Capitales** y **Quiz de Banderas** para encender/apagar la lectura en cualquier momento de la partida.
 
 - [x] **Internacionalización y Soporte Multi-idioma Completo (i18n Español / Inglés)**:
   - Detección automática y reactiva del idioma del dispositivo mediante `expo-localization`.
