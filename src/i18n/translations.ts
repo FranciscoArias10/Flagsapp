@@ -306,6 +306,14 @@ export const TRANSLATIONS_ES: TranslationsDictionary = {
   profile_setting_voice_desc: 'Lee en voz alta las preguntas y países durante la partida',
   game_voice_tooltip_on: 'Voz activada',
   game_voice_tooltip_off: 'Voz desactivada',
+
+  // Hands-Free Mode
+  profile_setting_hands_free: 'Modo Manos Libres (Micrófono)',
+  profile_setting_hands_free_desc: 'Responde diciendo la capital o país en voz alta sin tocar la pantalla',
+  game_hands_free_badge: '🎙️ MANOS LIBRES',
+  game_hands_free_listening: 'Escuchando tu voz...',
+  game_hands_free_dev_notice: 'Micrófono nativo requiere Development Build',
+  game_hands_free_heard: 'Escuchado:',
 };
 
 export const TRANSLATIONS_EN: TranslationsDictionary = {
@@ -613,6 +621,14 @@ export const TRANSLATIONS_EN: TranslationsDictionary = {
   profile_setting_voice_desc: 'Read questions and countries aloud during gameplay',
   game_voice_tooltip_on: 'Voice enabled',
   game_voice_tooltip_off: 'Voice disabled',
+
+  // Hands-Free Mode
+  profile_setting_hands_free: 'Hands-Free Mode (Microphone)',
+  profile_setting_hands_free_desc: 'Answer by speaking the capital or country aloud without touching the screen',
+  game_hands_free_badge: '🎙️ HANDS-FREE',
+  game_hands_free_listening: 'Listening for your voice...',
+  game_hands_free_dev_notice: 'Native microphone requires Development Build',
+  game_hands_free_heard: 'Heard:',
 };
 
 export const CONTINENT_TRANSLATIONS: Record<string, { es: string; en: string }> = {

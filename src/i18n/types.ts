@@ -310,7 +310,15 @@ export type TranslationKey =
   | 'profile_setting_voice'
   | 'profile_setting_voice_desc'
   | 'game_voice_tooltip_on'
-  | 'game_voice_tooltip_off';
+  | 'game_voice_tooltip_off'
+
+  // Hands-Free Mode Keys
+  | 'profile_setting_hands_free'
+  | 'profile_setting_hands_free_desc'
+  | 'game_hands_free_badge'
+  | 'game_hands_free_listening'
+  | 'game_hands_free_dev_notice'
+  | 'game_hands_free_heard';
 
 export type TranslationsDictionary = Record<TranslationKey, string>;
 
