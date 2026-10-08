@@ -28,7 +28,17 @@
     "plugins": [
       "expo-font",
       "expo-audio",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permite a Flags++ usar el micrófono para responder preguntas por voz en tiempo real.",
+          "speechRecognitionPermission": "Permite a Flags++ reconocer tus respuestas por voz en el juego.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
     ]
   }
 }
