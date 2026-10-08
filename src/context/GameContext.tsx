@@ -64,6 +64,7 @@ const INITIAL_STATS: UserStats = {
   hapticsEnabled: true,
   fastAnswerOpportunityEnabled: true,
   voiceAnnouncerEnabled: false,
+  handsFreeModeEnabled: false,
 };
 
 interface GameContextType {
@@ -78,6 +79,7 @@ interface GameContextType {
   toggleHaptics: () => void;
   toggleFastAnswerOpportunity: () => void;
   toggleVoiceAnnouncer: () => void;
+  toggleHandsFreeMode: () => void;
   resetProgress: () => Promise<void>;
   exportBackupData: () => Promise<string>;
   importBackupData: (backupJson: string) => Promise<{ success: boolean; message: string }>;
@@ -109,6 +111,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         if (parsed.voiceAnnouncerEnabled === undefined) {
           parsed.voiceAnnouncerEnabled = false;
+        }
+        if (parsed.handsFreeModeEnabled === undefined) {
+          parsed.handsFreeModeEnabled = false;
         }
         // Self-heal gamesPlayed if it was 0 or undercounted compared to total answers
         if (parsed.totalAnswers > 0) {
@@ -391,6 +396,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const toggleHandsFreeMode = () => {
+    setStats((prev) => {
+      const updated = {
+        ...prev,
+        handsFreeModeEnabled: !prev.handsFreeModeEnabled,
+      };
+      persistData(updated, achievements);
+      return updated;
+    });
+  };
+
   const updateProfile = async (profile: { username: string; avatar: string; favoriteCountryCode?: string }) => {
     setStats((prev) => {
       const updated = {
@@ -474,6 +490,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleHaptics,
         toggleFastAnswerOpportunity,
         toggleVoiceAnnouncer,
+        toggleHandsFreeMode,
         resetProgress,
         exportBackupData,
         importBackupData,

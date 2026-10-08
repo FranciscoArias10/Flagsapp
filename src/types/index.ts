@@ -74,6 +74,7 @@ export interface UserStats {
   hapticsEnabled: boolean;
   fastAnswerOpportunityEnabled?: boolean;
   voiceAnnouncerEnabled?: boolean;
+  handsFreeModeEnabled?: boolean;
   themePreference?: ThemePreference;
   languagePreference?: LanguagePreference;
 }
