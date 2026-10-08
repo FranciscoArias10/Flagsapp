@@ -6,12 +6,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
-- [ ] **Modo Manos Libres y Respuesta por Voz con Micrófono Abierto (STT en Streaming)**:
-  - **Concepto**: Permitir que el jugador responda hablando en voz alta (ej. *"Quito"*, *"Bogotá"*, *"Tokio"*) de manera ultra-rápida sin necesidad de tocar la pantalla.
-  - **Micrófono Abierto Continuo**: Escucha activa en streaming (`continuous: true`, `interimResults: true`) mediante `expo-speech-recognition` para que el jugador pueda responder en cualquier milisegundo apenas vea o escuche la pregunta.
-  - **Validación Fonética y Normalización Ultra-Rápida**: Normalización de texto (remoción de tildes, minúsculas, eliminación de ruido y prefijos como *"es quito"* o *"creo que quito"* ➔ detecta *"quito"* en menos de 100ms).
-  - **Cancelación de Auto-interferencia (Barge-In)**: Silenciado instantáneo (`Speech.stop()`) del locutor de preguntas en el momento exacto en que el micrófono detecta el inicio de la voz del jugador para evitar acople acústico con el altavoz.
-  - **Requisito Técnico**: Requiere Development Build (`npx expo run:android` / EAS Build) para habilitar las APIs nativas de audio y reconocimiento de Android/iOS.
 - [ ] **Filtro por Dificultad en el Atlas**:
   - Filtrar países por dificultad (Fácil, Intermedio, Experto) mediante chips interactivos en el Atlas.
 
@@ -22,6 +16,19 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ---
 
 ## ✅ Tareas Completadas
+
+- [x] **Modo Manos Libres y Respuesta por Voz con Micrófono Abierto (STT en Streaming)**:
+  - **Concepto**: Permitir que el jugador responda hablando en voz alta (ej. *"Quito"*, *"Bogotá"*, *"Tokio"*) de manera ultra-rápida sin necesidad de tocar la pantalla.
+  - **Micrófono Abierto Continuo**: Escucha activa en streaming (`continuous: true`, `interimResults: true`) mediante `expo-speech-recognition` para contestar de inmediato apenas se vea o escuche la pregunta.
+  - **Validación Fonética y Normalización Ultra-Rápida**: Normalización en tiempo real (`phoneticMatcher.ts`), remoción de acentos/diacríticos y descarte instantáneo de prefijos coloquiales (*"es quito"*, *"creo que quito"* ➔ detecta *"quito"* en < 100ms) con cálculo de distancia Levenshtein y similitud de Sorenson-Dice.
+  - **Biasing Contextual Nativo**: Inyección de palabras clave de la pregunta (respuesta correcta y distractores) para reconocimiento nativo prioritario (`contextualStrings`) en Android y iOS.
+  - **Cancelación de Auto-interferencia (Barge-In)**: Silenciado instantáneo (`Speech.stop()`) del locutor de preguntas en el momento exacto en que el micrófono detecta el inicio de la voz o sonido (`speechstart`/`soundstart`) para evitar eco y auto-interferencia.
+  - **Soporte Defensivo Multiplataforma**: Verificación nativa segura (`checkNativeAvailability`), permitiendo que el proyecto funcione sin caídas en Expo Go tradicional y active el streaming completo en Development Builds (`npx expo run:android` / EAS Build).
+  - **Controles e Interfaz en Vivo**:
+    - Conmutador en **Perfil > Ajustes de la Aplicación** (`handsFreeModeEnabled`).
+    - Botón de acceso rápido al micrófono en la cabecera de las preguntas de **Modo Capitales** y **Quiz de Banderas**.
+    - Banner visual de estado en tiempo real con indicador luminoso verde, transcripción instantánea de lo escuchado (*Escuchado: "Quito"*) y aviso contextual.
+  - **Internacionalización (i18n)**: Textos e indicadores completamente traducidos al Español e Inglés.
 
 - [x] **Corrección de Modo Oscuro en Modal de Recuento de Respuestas (`ReviewAnswersModal`)**:
   - Solucionado el problema visual donde la cabecera superior y la barra de filtros conservaban un fondo blanco rígido (`#FFFFFF`), provocando que el título quedara invisible por contraste blanco sobre blanco.
