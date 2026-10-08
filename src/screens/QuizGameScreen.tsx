@@ -26,6 +26,7 @@ import { ReviewAnswersModal } from '../components/ReviewAnswersModal';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useHandsFreeQuiz } from '../hooks/useHandsFreeQuiz';
 
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
@@ -42,7 +43,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
-  const { recordAnswer, recordGameStart, recordQuizResult, stats, toggleVoiceAnnouncer } = useGame();
+  const { recordAnswer, recordGameStart, recordQuizResult, stats, toggleVoiceAnnouncer, toggleHandsFreeMode } = useGame();
   const { isDark, colors } = useTheme();
   const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const hasCountedGameRef = useRef(false);
@@ -489,6 +490,30 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     }, 700);
   };
 
+  const handsFree = useHandsFreeQuiz({
+    enabled: Boolean(stats.handsFreeModeEnabled),
+    isActive: questions.length > 0 && !showSummary && !isAnswered && Boolean(questions[currentIndex]),
+    targetAnswer: questions[currentIndex] ? getCountryName(questions[currentIndex].options[questions[currentIndex].correctOptionIndex]) : '',
+    distractors: questions[currentIndex]
+      ? questions[currentIndex].options
+          .filter((_, idx) => idx !== questions[currentIndex].correctOptionIndex)
+          .map((c) => getCountryName(c))
+      : [],
+    language: language === 'en' ? 'en' : 'es',
+    onAnswerMatch: (matchedOption) => {
+      const q = questions[currentIndex];
+      if (!q) return;
+      const matchedIdx = q.options.findIndex(
+        (c) => getCountryName(c).toLowerCase().trim() === matchedOption.toLowerCase().trim()
+      );
+      if (matchedIdx !== -1) {
+        handleSelectOption(matchedIdx);
+      } else {
+        handleSelectOption(q.correctOptionIndex);
+      }
+    },
+  });
+
   if (questions.length === 0) return null;
 
   const currentQ = questions[currentIndex];
@@ -766,35 +791,63 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
         >
           <View style={styles.promptRow}>
             <Text style={[styles.promptText, { color: colors.secondaryLabel }]}>{t('quiz_which_country')}</Text>
-            <Pressable
-              onPress={() => {
-                toggleVoiceAnnouncer();
-                if (!stats.voiceAnnouncerEnabled && currentQ) {
-                  speechService.setEnabled(true);
-                  speechService.speak(t('quiz_which_country'), language);
-                } else {
-                  speechService.stop();
-                }
-              }}
-              style={[
-                styles.voiceQuickBtn,
-                stats.voiceAnnouncerEnabled && styles.voiceQuickBtnActive,
-                {
-                  backgroundColor: stats.voiceAnnouncerEnabled
-                    ? 'rgba(52, 199, 89, 0.15)'
-                    : isDark
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.04)',
-                },
-              ]}
-              hitSlop={10}
-            >
-              <Ionicons
-                name={stats.voiceAnnouncerEnabled ? 'volume-high' : 'volume-mute-outline'}
-                size={18}
-                color={stats.voiceAnnouncerEnabled ? colors.systemGreen : colors.tertiaryLabel}
-              />
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Pressable
+                onPress={() => {
+                  toggleVoiceAnnouncer();
+                  if (!stats.voiceAnnouncerEnabled && currentQ) {
+                    speechService.setEnabled(true);
+                    speechService.speak(t('quiz_which_country'), language);
+                  } else {
+                    speechService.stop();
+                  }
+                }}
+                style={[
+                  styles.voiceQuickBtn,
+                  stats.voiceAnnouncerEnabled && styles.voiceQuickBtnActive,
+                  {
+                    backgroundColor: stats.voiceAnnouncerEnabled
+                      ? 'rgba(52, 199, 89, 0.15)'
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.04)',
+                  },
+                ]}
+                hitSlop={10}
+              >
+                <Ionicons
+                  name={stats.voiceAnnouncerEnabled ? 'volume-high' : 'volume-mute-outline'}
+                  size={18}
+                  color={stats.voiceAnnouncerEnabled ? colors.systemGreen : colors.tertiaryLabel}
+                />
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  toggleHandsFreeMode();
+                  soundService.triggerSelection();
+                }}
+                style={[
+                  styles.voiceQuickBtn,
+                  stats.handsFreeModeEnabled && styles.handsFreeQuickBtnActive,
+                  {
+                    backgroundColor: stats.handsFreeModeEnabled
+                      ? 'rgba(48, 176, 199, 0.18)'
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.04)',
+                    marginLeft: 8,
+                  },
+                ]}
+                hitSlop={10}
+              >
+                <Ionicons
+                  name={stats.handsFreeModeEnabled ? 'mic' : 'mic-off-outline'}
+                  size={18}
+                  color={stats.handsFreeModeEnabled ? '#30B0C7' : colors.tertiaryLabel}
+                />
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.flagWrap}>
@@ -812,6 +865,53 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
             <Text style={styles.continentPillText}>{getContinentName(currentQ.targetCountry.continent)}</Text>
           </View>
         </Animated.View>
+
+        {/* Hands-Free Active Recognition Banner */}
+        {Boolean(stats.handsFreeModeEnabled) && !isAnswered && (
+          <View
+            style={[
+              styles.handsFreeLiveBar,
+              {
+                backgroundColor: isDark ? 'rgba(48, 176, 199, 0.12)' : 'rgba(48, 176, 199, 0.08)',
+                borderColor: handsFree.isListening ? '#30B0C7' : colors.separator,
+              },
+            ]}
+          >
+            <View style={styles.handsFreeLiveBarLeft}>
+              <View
+                style={[
+                  styles.handsFreeLiveDot,
+                  { backgroundColor: handsFree.isListening ? '#34C759' : '#8E8E93' },
+                ]}
+              />
+              <Ionicons
+                name={handsFree.isListening ? 'mic' : 'mic-outline'}
+                size={16}
+                color={handsFree.isListening ? '#30B0C7' : colors.secondaryLabel}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[
+                  styles.handsFreeLiveText,
+                  { color: handsFree.isListening ? colors.label : colors.secondaryLabel },
+                ]}
+                numberOfLines={1}
+              >
+                {handsFree.transcript
+                  ? `${t('game_hands_free_heard')} "${handsFree.transcript}"`
+                  : handsFree.isListening
+                  ? t('game_hands_free_listening')
+                  : t('game_hands_free_badge')}
+              </Text>
+            </View>
+
+            {!handsFree.isNativeAvailable && (
+              <Text style={[styles.handsFreeDevNotice, { color: colors.secondaryLabel }]}>
+                {t('game_hands_free_dev_notice')}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Timeout Loss Warning Banner */}
         {isAnswered && selectedOptionIndex === null && (
@@ -1165,6 +1265,42 @@ const styles = StyleSheet.create({
   voiceQuickBtnActive: {
     borderWidth: 1.5,
     borderColor: 'rgba(52, 199, 89, 0.4)',
+  },
+  handsFreeQuickBtnActive: {
+    borderWidth: 1.5,
+    borderColor: '#30B0C7',
+  },
+  handsFreeLiveBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  handsFreeLiveBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  handsFreeLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  handsFreeLiveText: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  handsFreeDevNotice: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    marginLeft: 6,
   },
   flagWrap: {
     marginBottom: 14,
