@@ -866,50 +866,95 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           </View>
         </Animated.View>
 
-        {/* Hands-Free Active Recognition Banner */}
+        {/* Hands-Free Active Recognition / Trace HUD */}
         {Boolean(stats.handsFreeModeEnabled) && !isAnswered && (
           <View
             style={[
               styles.handsFreeLiveBar,
               {
-                backgroundColor: isDark ? 'rgba(48, 176, 199, 0.12)' : 'rgba(48, 176, 199, 0.08)',
-                borderColor: handsFree.isListening ? '#30B0C7' : colors.separator,
+                backgroundColor: !handsFree.isNativeAvailable
+                  ? isDark
+                    ? 'rgba(255, 149, 0, 0.12)'
+                    : 'rgba(255, 149, 0, 0.08)'
+                  : isDark
+                  ? 'rgba(48, 176, 199, 0.14)'
+                  : 'rgba(48, 176, 199, 0.08)',
+                borderColor: !handsFree.isNativeAvailable
+                  ? '#FF9500'
+                  : handsFree.isListening
+                  ? '#30B0C7'
+                  : colors.separator,
               },
             ]}
           >
-            <View style={styles.handsFreeLiveBarLeft}>
-              <View
-                style={[
-                  styles.handsFreeLiveDot,
-                  { backgroundColor: handsFree.isListening ? '#34C759' : '#8E8E93' },
-                ]}
-              />
-              <Ionicons
-                name={handsFree.isListening ? 'mic' : 'mic-outline'}
-                size={16}
-                color={handsFree.isListening ? '#30B0C7' : colors.secondaryLabel}
-                style={{ marginRight: 6 }}
-              />
-              <Text
-                style={[
-                  styles.handsFreeLiveText,
-                  { color: handsFree.isListening ? colors.label : colors.secondaryLabel },
-                ]}
-                numberOfLines={1}
-              >
-                {handsFree.transcript
-                  ? `${t('game_hands_free_heard')} "${handsFree.transcript}"`
-                  : handsFree.isListening
-                  ? t('game_hands_free_listening')
-                  : t('game_hands_free_badge')}
-              </Text>
-            </View>
+            <View style={styles.handsFreeLiveBarRow}>
+              <View style={styles.handsFreeLiveBarLeft}>
+                <View
+                  style={[
+                    styles.handsFreeLiveDot,
+                    {
+                      backgroundColor: !handsFree.isNativeAvailable
+                        ? '#FF9500'
+                        : handsFree.isListening
+                        ? '#34C759'
+                        : '#8E8E93',
+                    },
+                  ]}
+                />
+                <Ionicons
+                  name={!handsFree.isNativeAvailable ? 'alert-circle' : handsFree.isListening ? 'mic' : 'mic-outline'}
+                  size={16}
+                  color={!handsFree.isNativeAvailable ? '#FF9500' : handsFree.isListening ? '#30B0C7' : colors.secondaryLabel}
+                  style={{ marginRight: 6 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.handsFreeLiveText,
+                      { color: !handsFree.isNativeAvailable ? colors.systemOrange : handsFree.isListening ? colors.label : colors.secondaryLabel },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {!handsFree.isNativeAvailable
+                      ? 'Rastreo: Micrófono inactivo en Expo Go'
+                      : handsFree.transcript
+                      ? `${t('game_hands_free_heard')} "${handsFree.transcript}"`
+                      : handsFree.isListening
+                      ? t('game_hands_free_listening')
+                      : t('game_hands_free_badge')}
+                  </Text>
+                  {!handsFree.isNativeAvailable ? (
+                    <Text style={[styles.handsFreeDevNotice, { color: colors.secondaryLabel }]}>
+                      Expo Go no soporta APIs de micrófono • Requiere build: npx expo run:android
+                    </Text>
+                  ) : (
+                    <Text style={[styles.handsFreeTraceSubtext, { color: colors.secondaryLabel }]}>
+                      {handsFree.lastMatch
+                        ? `Coincidencia: ${Math.round(handsFree.lastMatch.confidence * 100)}% (${handsFree.lastMatch.isMatch ? 'Acierto' : 'Evaluando'})`
+                        : 'Habla en voz alta el país para responder'}
+                    </Text>
+                  )}
+                </View>
+              </View>
 
-            {!handsFree.isNativeAvailable && (
-              <Text style={[styles.handsFreeDevNotice, { color: colors.secondaryLabel }]}>
-                {t('game_hands_free_dev_notice')}
-              </Text>
-            )}
+              {!handsFree.isNativeAvailable && (
+                <Pressable
+                  onPress={() => {
+                    handsFree.simulateVoiceInput(getCountryName(currentQ.targetCountry));
+                  }}
+                  style={({ pressed }) => [
+                    styles.handsFreeSimulateBtn,
+                    pressed && { opacity: 0.75 },
+                  ]}
+                  hitSlop={6}
+                >
+                  <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.handsFreeSimulateBtnText}>
+                    Simular "{getCountryName(currentQ.targetCountry)}"
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         )}
 
@@ -1271,14 +1316,17 @@ const styles = StyleSheet.create({
     borderColor: '#30B0C7',
   },
   handsFreeLiveBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 12,
+  },
+  handsFreeLiveBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   handsFreeLiveBarLeft: {
     flexDirection: 'row',
@@ -1293,14 +1341,32 @@ const styles = StyleSheet.create({
   },
   handsFreeLiveText: {
     fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '700',
   },
   handsFreeDevNotice: {
     fontSize: 11,
     fontWeight: '500',
-    fontStyle: 'italic',
-    marginLeft: 6,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  handsFreeTraceSubtext: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  handsFreeSimulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  handsFreeSimulateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   flagWrap: {
     marginBottom: 14,
