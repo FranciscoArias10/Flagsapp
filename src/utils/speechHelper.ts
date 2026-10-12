@@ -1,4 +1,5 @@
 import * as Speech from 'expo-speech';
+import { Platform } from 'react-native';
 
 class SpeechService {
   private enabled: boolean = false;
@@ -16,7 +17,11 @@ class SpeechService {
 
   public stop() {
     try {
-      Speech.stop();
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      } else {
+        Speech.stop();
+      }
     } catch {
       // Non-critical
     }
@@ -26,11 +31,25 @@ class SpeechService {
     if (!this.enabled) return;
 
     try {
-      Speech.stop();
       const languageCode = lang === 'en' ? 'en-US' : 'es-ES';
+
+      // En entorno Web, Chromium requiere un micro-delay de 50ms tras cancel() para no abortar el utterance
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        setTimeout(() => {
+          if (!this.enabled) return;
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = languageCode;
+          utterance.rate = 1.05;
+          window.speechSynthesis.speak(utterance);
+        }, 50);
+        return;
+      }
+
+      Speech.stop();
       Speech.speak(text, {
         language: languageCode,
-        rate: 1.1, // Quick, agile pronunciation rhythm suited for quiz
+        rate: 1.1, // Ritmo ágil adaptado a la velocidad del quiz
         pitch: 1.0,
         ...options,
       });

@@ -152,17 +152,14 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
     if (!showSummary && !isAnswered && questions[currentIndex] && stats.voiceAnnouncerEnabled) {
       speechService.speak(t('quiz_which_country'), language);
     }
-    return () => {
-      speechService.stop();
-    };
   }, [currentIndex, showSummary, isAnswered, language, stats.voiceAnnouncerEnabled]);
 
-  // Cleanup on unmount
+  // Stop speech on question change, answer or unmount
   useEffect(() => {
     return () => {
       speechService.stop();
     };
-  }, []);
+  }, [currentIndex, isAnswered, showSummary]);
 
   const startNewGame = (countParam = questionCount, timeParam = questionTimeLimit) => {
     if (autoAdvanceTimer.current) {

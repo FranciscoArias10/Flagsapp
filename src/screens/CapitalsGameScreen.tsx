@@ -251,17 +251,14 @@ export const CapitalsGameScreen: React.FC = () => {
       const countryName = getCountryName(q.country);
       speechService.speakCapitalQuestion(countryName, language);
     }
-    return () => {
-      speechService.stop();
-    };
   }, [currentIndex, screenMode, showSummary, isAnswered, language, stats.voiceAnnouncerEnabled]);
 
-  // Stop speech on unmount
+  // Stop speech on question change, answer or unmount
   useEffect(() => {
     return () => {
       speechService.stop();
     };
-  }, []);
+  }, [currentIndex, isAnswered, showSummary]);
 
   const generateCapitalQuestions = (
     count: number | 'all' = selectedQuestionCount,
