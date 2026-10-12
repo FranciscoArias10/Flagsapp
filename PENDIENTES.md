@@ -6,9 +6,6 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 
 ## 🚀 Siguiente Prioridad / En Progreso
 
-- [ ] **Filtro por Dificultad en el Atlas**:
-  - Filtrar países por dificultad (Fácil, Intermedio, Experto) mediante chips interactivos en el Atlas.
-
 ---
 
 ## ⏳ Tareas Pendientes Futuras (Backlog)
@@ -16,6 +13,14 @@ Documento de seguimiento de tareas, mejoras pendientes y nuevas funcionalidades 
 ---
 
 ## ✅ Tareas Completadas
+
+- [x] **Filtro por Dificultad en el Atlas Mundial**:
+  - Selector deslizable de chips interactivos para filtrar países según su nivel de dificultad: *Todas*, *🌿 Fácil (Nivel 1)*, *🎓 Intermedio (Nivel 2)* y *🔥 Experto (Nivel 3)*.
+  - Filtrado reactivo combinado: funciona de forma simultánea con el buscador de texto (nombre y capital) y con los chips de continentes (*América, Europa, Asia, África, Oceanía*).
+  - Píldoras visuales de dificultad con colores semánticos e iconos en cada tarjeta de país del catálogo.
+  - Badge de nivel en la ventana emergente de detalle de país (`CountryDetailModal`).
+  - Botón de restablecimiento rápido de filtros (*"Restablecer Filtros"*) en caso de no encontrar coincidencias.
+  - Soporte completo bilingüe (Español e Inglés) y modo oscuro adaptado.
 
 - [x] **Modo Manos Libres y Respuesta por Voz con Micrófono Abierto (STT en Streaming)**:
   - **Concepto**: Permitir que el jugador responda hablando en voz alta (ej. *"Quito"*, *"Bogotá"*, *"Tokio"*) de manera ultra-rápida sin necesidad de tocar la pantalla.
