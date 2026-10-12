@@ -172,6 +172,7 @@ export const CapitalsGameScreen: React.FC = () => {
   const [shieldMessage, setShieldMessage] = useState<string | null>(null);
   const [eliminatedCapitals, setEliminatedCapitals] = useState<string[]>([]);
   const questionStartTimeRef = useRef<number>(Date.now());
+  const handsFreeRef = useRef<any>(null);
 
   const [questionTimeLimit, setQuestionTimeLimit] = useState<number>(15);
   const [pendingDifficulty, setPendingDifficulty] = useState<CapitalDifficultyConfig | null>(null);
@@ -526,6 +527,7 @@ export const CapitalsGameScreen: React.FC = () => {
       triggerShake();
       setShieldMessage('🛡️ ¡Segunda Oportunidad Activada! Te queda un intento en esta capital');
       setTimeLeft((prev) => Math.max(prev, 5));
+      handsFreeRef.current?.resetAnswerState();
       return;
     }
 
@@ -700,11 +702,13 @@ export const CapitalsGameScreen: React.FC = () => {
     isActive: screenMode === 'playing' && !showSummary && !isAnswered && Boolean(questions[currentIndex]),
     targetAnswer: questions[currentIndex]?.correctCapital || '',
     distractors: questions[currentIndex]?.options.filter((o) => o !== questions[currentIndex]?.correctCapital) || [],
+    eliminatedOptions: eliminatedCapitals,
     language: language === 'en' ? 'en' : 'es',
     onAnswerMatch: (matchedOption) => {
       handleSelectCapital(matchedOption);
     },
   });
+  handsFreeRef.current = handsFree;
 
   // 1. DIFFICULTY SELECTION SCREEN
   if (screenMode === 'difficulty_select') {

@@ -9,6 +9,7 @@ export interface UseHandsFreeQuizOptions {
   enabled: boolean;
   targetAnswer: string;
   distractors: string[];
+  eliminatedOptions?: string[]; // Opciones eliminadas (por segunda oportunidad / escudo)
   language?: 'es' | 'en';
   isActive: boolean; // Verdadero mientras la ronda esté en curso (no respondida, no resumen)
   onAnswerMatch: (matchedOption: string, isCorrect: boolean) => void;
@@ -18,6 +19,7 @@ export function useHandsFreeQuiz({
   enabled,
   targetAnswer,
   distractors,
+  eliminatedOptions = [],
   language = 'es',
   isActive,
   onAnswerMatch,
@@ -35,8 +37,13 @@ export function useHandsFreeQuiz({
   const distractorsRef = useRef(distractors);
   const onAnswerMatchRef = useRef(onAnswerMatch);
 
+  // Excluir de los distractores las opciones ya descartadas en la segunda oportunidad
+  const activeDistractors = distractors.filter(
+    (d) => !eliminatedOptions?.some((elim) => elim.toLowerCase().trim() === d.toLowerCase().trim())
+  );
+
   targetAnswerRef.current = targetAnswer;
-  distractorsRef.current = distractors;
+  distractorsRef.current = activeDistractors;
   onAnswerMatchRef.current = onAnswerMatch;
 
   // Suscripción al espectro de frecuencias en tiempo real
@@ -53,12 +60,18 @@ export function useHandsFreeQuiz({
     setIsNativeAvailable(avail);
   }, []);
 
-  // Reiniciar estado de respuesta en cuanto cambia la pregunta o targetAnswer
-  useEffect(() => {
+  // Función para reiniciar el estado de respuesta (usada al cambiar de pregunta o activar Segunda Oportunidad)
+  const resetAnswerState = useCallback(() => {
+    console.log('[HandsFree] 🔄 Reiniciando detector de voz para nueva oportunidad/pregunta');
     matchedFiredRef.current = false;
     setTranscript('');
     setLastMatch(null);
-  }, [targetAnswer]);
+  }, []);
+
+  // Reiniciar estado de respuesta en cuanto cambia la pregunta o se descarta una opción por Segunda Oportunidad
+  useEffect(() => {
+    resetAnswerState();
+  }, [targetAnswer, eliminatedOptions.length, resetAnswerState]);
 
   // Manejador de transcripción en streaming e interimResults (< 100ms)
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
@@ -93,6 +106,7 @@ export function useHandsFreeQuiz({
   // Función para simular voz en pruebas o en Expo Go
   const simulateVoiceInput = useCallback((spokenText: string) => {
     console.log(`[HandsFree] 🧪 Simulando reconocimiento de voz: "${spokenText}"`);
+    matchedFiredRef.current = false;
     handleTranscript(spokenText, true);
   }, [handleTranscript]);
 
@@ -181,6 +195,7 @@ export function useHandsFreeQuiz({
     isNativeAvailable,
     errorMessage,
     simulateVoiceInput,
+    resetAnswerState,
     requestMicAccess,
   };
 }

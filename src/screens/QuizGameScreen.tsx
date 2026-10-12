@@ -69,6 +69,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
   const [shieldMessage, setShieldMessage] = useState<string | null>(null);
   const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
   const questionStartTimeRef = useRef<number>(Date.now());
+  const handsFreeRef = useRef<any>(null);
 
   const [timeLeft, setTimeLeft] = useState(initialTimeLimit);
   const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -333,6 +334,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       setShieldMessage(t('quiz_shield_defend_msg'));
       // Give buffer so they can read and try again without instant timeout
       setTimeLeft((prev) => Math.max(prev, 5));
+      handsFreeRef.current?.resetAnswerState();
       return;
     }
 
@@ -497,6 +499,9 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
           .filter((_, idx) => idx !== questions[currentIndex].correctOptionIndex)
           .map((c) => getCountryName(c))
       : [],
+    eliminatedOptions: eliminatedOptions
+      .map((idx) => (questions[currentIndex]?.options[idx] ? getCountryName(questions[currentIndex].options[idx]) : ''))
+      .filter(Boolean),
     language: language === 'en' ? 'en' : 'es',
     onAnswerMatch: (matchedOption) => {
       const q = questions[currentIndex];
@@ -511,6 +516,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
       }
     },
   });
+  handsFreeRef.current = handsFree;
 
   if (questions.length === 0) return null;
 
