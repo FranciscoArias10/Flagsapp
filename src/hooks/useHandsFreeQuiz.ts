@@ -71,7 +71,7 @@ export function useHandsFreeQuiz({
 
   // Ciclo de vida y listeners del servicio de voz
   useEffect(() => {
-    if (!enabled || !isActive) {
+    if (!enabled || !isActive || !isNativeAvailable) {
       if (voiceRecognitionService.getIsListening()) {
         voiceRecognitionService.stopListening().catch(() => {});
       }
@@ -121,7 +121,7 @@ export function useHandsFreeQuiz({
     return () => {
       voiceRecognitionService.stopListening().catch(() => {});
     };
-  }, [enabled, isActive, targetAnswer, language, handleTranscript]);
+  }, [enabled, isActive, isNativeAvailable, targetAnswer, language, handleTranscript]);
 
   return {
     isListening,

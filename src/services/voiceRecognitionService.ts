@@ -1,3 +1,4 @@
+import { isRunningInExpoGo, requireOptionalNativeModule } from 'expo';
 import { speechService } from '../utils/speechHelper';
 
 export interface VoiceRecognitionEvents {
@@ -34,7 +35,26 @@ class VoiceRecognitionService {
    */
   public checkNativeAvailability(): boolean {
     try {
-      // Importación dinámica segura para evitar excepciones en Expo Go estándar
+      // 1. En Expo Go estándar nunca está disponible el módulo nativo.
+      // Retornar falso inmediatamente sin intentar cargar el módulo.
+      if (typeof isRunningInExpoGo === 'function' && isRunningInExpoGo()) {
+        this.isNativeAvailable = false;
+        this.nativeModule = null;
+        return false;
+      }
+
+      // 2. Comprobar si el módulo nativo existe en el binario sin lanzar excepción
+      const nativeMod = typeof requireOptionalNativeModule === 'function'
+        ? requireOptionalNativeModule('ExpoSpeechRecognition')
+        : null;
+
+      if (!nativeMod) {
+        this.isNativeAvailable = false;
+        this.nativeModule = null;
+        return false;
+      }
+
+      // 3. En Development Build compilado, requerir con seguridad
       const speechModule = require('expo-speech-recognition');
       if (speechModule && speechModule.ExpoSpeechRecognitionModule) {
         this.nativeModule = speechModule.ExpoSpeechRecognitionModule;
