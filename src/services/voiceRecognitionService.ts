@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { isRunningInExpoGo, requireOptionalNativeModule } from 'expo';
 import { speechService } from '../utils/speechHelper';
+import { audioAnalyzerService } from './audioAnalyzerService';
 
 export interface VoiceRecognitionEvents {
   onStart?: () => void;
@@ -86,6 +87,10 @@ class VoiceRecognitionService {
   }
 
   public isAvailable(): boolean {
+    if (Platform.OS === 'web') {
+      return typeof window !== 'undefined' &&
+        Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    }
     return this.isNativeAvailable && Boolean(this.nativeModule);
   }
 
@@ -101,6 +106,10 @@ class VoiceRecognitionService {
    * Solicita permisos de micrófono y reconocimiento de voz nativos.
    */
   public async requestPermissions(): Promise<boolean> {
+    if (Platform.OS === 'web') {
+      return await audioAnalyzerService.startAnalysis();
+    }
+
     if (!this.isAvailable()) {
       return false;
     }
@@ -121,28 +130,38 @@ class VoiceRecognitionService {
    * Inicia la escucha continua y en streaming (interimResults: true).
    */
   public async startListening(params: StartRecognitionParams = {}): Promise<boolean> {
-    if (!this.checkNativeAvailability()) {
-      this.listeners.onError?.(
-        'El reconocimiento de voz nativo en streaming requiere un Development Build (npx expo run:android).'
-      );
-      return false;
-    }
+    this.currentParams = params;
 
-    // Soporte para Web Speech API en navegadores
+    // Soporte para Web Speech API y Analizador de audio en navegadores
     if (Platform.OS === 'web') {
       try {
+        // Iniciar en paralelo el analizador de espectro de audio (Web Audio API)
+        audioAnalyzerService.startAnalysis().catch(() => {});
+
         const SpeechClass = typeof window !== 'undefined' &&
           ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-        if (!SpeechClass) return false;
+
+        if (!SpeechClass) {
+          this.listeners.onError?.(
+            'Tu navegador no soporta Web Speech API (se recomienda Google Chrome).'
+          );
+          return false;
+        }
 
         if (this.webRecognition) {
           try { this.webRecognition.stop(); } catch {}
+          this.webRecognition = null;
         }
 
         this.webRecognition = new SpeechClass();
         this.webRecognition.continuous = true;
         this.webRecognition.interimResults = true;
-        this.webRecognition.lang = params.lang === 'en' ? 'en-US' : 'es-ES';
+        
+        // Priorizar español con detección regional o fallback es-ES
+        const browserLang = typeof navigator !== 'undefined' ? navigator.language : 'es-ES';
+        this.webRecognition.lang = params.lang === 'en'
+          ? 'en-US'
+          : browserLang?.startsWith('es') ? browserLang : 'es-ES';
 
         this.webRecognition.onstart = () => {
           this.isListening = true;
@@ -173,15 +192,34 @@ class VoiceRecognitionService {
         };
 
         this.webRecognition.onerror = (event: any) => {
-          if (event?.error !== 'no-speech') {
-            this.listeners.onError?.(`Error Web Speech: ${event?.error}`);
+          const errType = event?.error;
+          console.warn('[VoiceService Web] Evento error:', errType);
+          if (errType === 'network') {
+            this.listeners.onError?.(
+              'Chromium (Linux) no incluye clave de Google Speech. Para reconocimiento de voz nativo en web usa Google Chrome, o prueba los botones de simulación.'
+            );
+          } else if (errType === 'not-allowed') {
+            this.listeners.onError?.(
+              'Permiso de micrófono bloqueado en el navegador. Concede acceso al micrófono para continuar.'
+            );
+          } else if (errType !== 'no-speech') {
+            this.listeners.onError?.(`Error Web Speech: ${errType}`);
           }
         };
 
         this.webRecognition.onend = () => {
           this.isListening = false;
           if (this.shouldKeepListening) {
-            try { this.webRecognition.start(); } catch {}
+            setTimeout(() => {
+              if (this.shouldKeepListening && !this.isListening) {
+                try {
+                  this.webRecognition?.start();
+                } catch {
+                  // Reiniciar de forma limpia si la instancia cerró el ciclo
+                  this.startListening(this.currentParams).catch(() => {});
+                }
+              }
+            }, 250);
           } else {
             this.listeners.onEnd?.();
           }
@@ -194,6 +232,13 @@ class VoiceRecognitionService {
         console.warn('[VoiceService Web] Error starting Web Speech:', err);
         return false;
       }
+    }
+
+    if (!this.checkNativeAvailability()) {
+      this.listeners.onError?.(
+        'El reconocimiento de voz nativo en streaming requiere un Development Build (npx expo run:android).'
+      );
+      return false;
     }
 
     try {
@@ -242,6 +287,7 @@ class VoiceRecognitionService {
   public async stopListening(): Promise<void> {
     this.shouldKeepListening = false;
     this.isListening = false;
+    audioAnalyzerService.stopAnalysis();
 
     if (this.webRecognition) {
       try {
@@ -272,6 +318,7 @@ class VoiceRecognitionService {
   public async abortListening(): Promise<void> {
     this.shouldKeepListening = false;
     this.isListening = false;
+    audioAnalyzerService.stopAnalysis();
 
     if (this.webRecognition) {
       try {
@@ -328,6 +375,7 @@ class VoiceRecognitionService {
         // Medidor de volumen para feedback visual de onda sonora
         const subVolume = this.nativeModule.addListener('volumechange', (event: any) => {
           const val = typeof event?.value === 'number' ? event.value : 0;
+          audioAnalyzerService.updateNativeVolume(val);
           this.listeners.onVolumeChange?.(val);
         });
 

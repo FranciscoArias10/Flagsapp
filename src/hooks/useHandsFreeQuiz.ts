@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { voiceRecognitionService } from '../services/voiceRecognitionService';
+import { audioAnalyzerService, AudioSpectrumData } from '../services/audioAnalyzerService';
 import { matchVoiceAnswer, MatchResult } from '../utils/phoneticMatcher';
 import { soundService } from '../utils/soundHelper';
 
@@ -26,6 +28,7 @@ export function useHandsFreeQuiz({
   const [lastMatch, setLastMatch] = useState<MatchResult | null>(null);
   const [isNativeAvailable, setIsNativeAvailable] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [audioData, setAudioData] = useState<AudioSpectrumData>(audioAnalyzerService.getData());
 
   const matchedFiredRef = useRef(false);
   const targetAnswerRef = useRef(targetAnswer);
@@ -36,7 +39,15 @@ export function useHandsFreeQuiz({
   distractorsRef.current = distractors;
   onAnswerMatchRef.current = onAnswerMatch;
 
-  // Verificar disponibilidad del módulo nativo al inicializar
+  // Suscripción al espectro de frecuencias en tiempo real
+  useEffect(() => {
+    const unsubscribe = audioAnalyzerService.subscribe((data) => {
+      setAudioData(data);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Verificar disponibilidad del módulo nativo o Web Speech al inicializar
   useEffect(() => {
     const avail = voiceRecognitionService.checkNativeAvailability();
     setIsNativeAvailable(avail);
@@ -143,13 +154,33 @@ export function useHandsFreeQuiz({
     };
   }, [enabled, isActive, isNativeAvailable, targetAnswer, language, handleTranscript]);
 
+  const requestMicAccess = useCallback(async () => {
+    try {
+      const ok = await audioAnalyzerService.startAnalysis();
+      if (ok && Platform.OS === 'web') {
+        const allContextStrings = [targetAnswerRef.current, ...distractorsRef.current].filter(Boolean);
+        await voiceRecognitionService.startListening({
+          lang: language,
+          contextualStrings: allContextStrings,
+        });
+      }
+    } catch (e) {
+      console.warn('[HandsFree] Error al solicitar acceso al micrófono:', e);
+    }
+  }, [language]);
+
   return {
     isListening,
     transcript,
-    volume,
+    volume: Math.max(volume, audioData.volume),
+    spectrum: audioData.spectrum,
+    hasAudioSignal: audioData.hasSignal,
+    micStatus: audioData.status,
+    micErrorMessage: audioData.errorMessage || errorMessage,
     lastMatch,
     isNativeAvailable,
     errorMessage,
     simulateVoiceInput,
+    requestMicAccess,
   };
 }

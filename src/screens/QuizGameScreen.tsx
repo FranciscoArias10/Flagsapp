@@ -27,6 +27,7 @@ import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useHandsFreeQuiz } from '../hooks/useHandsFreeQuiz';
+import { AudioSpectrumVisualizer } from '../components/AudioSpectrumVisualizer';
 
 interface QuizGameScreenProps {
   continent?: Continent | 'Mundo';
@@ -895,8 +896,10 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     {
                       backgroundColor: !handsFree.isNativeAvailable
                         ? '#FF9500'
-                        : handsFree.isListening
+                        : handsFree.hasAudioSignal
                         ? '#34C759'
+                        : handsFree.isListening
+                        ? '#30B0C7'
                         : '#8E8E93',
                     },
                   ]}
@@ -904,7 +907,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 <Ionicons
                   name={!handsFree.isNativeAvailable ? 'alert-circle' : handsFree.isListening ? 'mic' : 'mic-outline'}
                   size={16}
-                  color={!handsFree.isNativeAvailable ? '#FF9500' : handsFree.isListening ? '#30B0C7' : colors.secondaryLabel}
+                  color={!handsFree.isNativeAvailable ? '#FF9500' : handsFree.hasAudioSignal ? '#34C759' : '#30B0C7'}
                   style={{ marginRight: 6 }}
                 />
                 <View style={{ flex: 1 }}>
@@ -916,7 +919,7 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                     numberOfLines={1}
                   >
                     {!handsFree.isNativeAvailable
-                      ? 'Rastreo: Micrófono inactivo en Expo Go'
+                      ? 'Rastreo: Micrófono nativo en Expo Go'
                       : handsFree.transcript
                       ? `${t('game_hands_free_heard')} "${handsFree.transcript}"`
                       : handsFree.isListening
@@ -937,24 +940,35 @@ export const QuizGameScreen: React.FC<QuizGameScreenProps> = ({
                 </View>
               </View>
 
-              {!handsFree.isNativeAvailable && (
-                <Pressable
-                  onPress={() => {
-                    handsFree.simulateVoiceInput(getCountryName(currentQ.targetCountry));
-                  }}
-                  style={({ pressed }) => [
-                    styles.handsFreeSimulateBtn,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                  hitSlop={6}
-                >
-                  <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
-                  <Text style={styles.handsFreeSimulateBtnText}>
-                    Simular "{getCountryName(currentQ.targetCountry)}"
-                  </Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={() => {
+                  handsFree.simulateVoiceInput(getCountryName(currentQ.targetCountry));
+                }}
+                style={({ pressed }) => [
+                  styles.handsFreeSimulateBtn,
+                  pressed && { opacity: 0.75 },
+                ]}
+                hitSlop={6}
+              >
+                <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text style={styles.handsFreeSimulateBtnText}>
+                  Probar "{getCountryName(currentQ.targetCountry)}"
+                </Text>
+              </Pressable>
             </View>
+
+            {/* Espectro de audio y medidor de decibelios en tiempo real */}
+            {handsFree.isNativeAvailable && (
+              <AudioSpectrumVisualizer
+                spectrum={handsFree.spectrum}
+                volume={handsFree.volume}
+                hasAudioSignal={handsFree.hasAudioSignal}
+                isListening={handsFree.isListening}
+                micStatus={handsFree.micStatus}
+                errorMessage={handsFree.micErrorMessage}
+                onRequestMicAccess={handsFree.requestMicAccess}
+              />
+            )}
           </View>
         )}
 
