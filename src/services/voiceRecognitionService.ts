@@ -195,10 +195,12 @@ class VoiceRecognitionService {
           const errType = event?.error;
           console.warn('[VoiceService Web] Evento error:', errType);
           if (errType === 'network') {
+            this.shouldKeepListening = false;
             this.listeners.onError?.(
-              'Chromium (Linux) no incluye clave de Google Speech. Para reconocimiento de voz nativo en web usa Google Chrome, o prueba los botones de simulación.'
+              'Chromium (Linux) no incluye clave de Google Speech. Para reconocimiento de voz en PC usa Google Chrome (yay -S google-chrome), o en móvil compila un Development Build.'
             );
-          } else if (errType === 'not-allowed') {
+          } else if (errType === 'not-allowed' || errType === 'service-not-allowed') {
+            this.shouldKeepListening = false;
             this.listeners.onError?.(
               'Permiso de micrófono bloqueado en el navegador. Concede acceso al micrófono para continuar.'
             );
