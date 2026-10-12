@@ -447,7 +447,15 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                   styles.diffCard,
                   {
                     backgroundColor: colors.cardBackground,
-                    borderColor: colors.cardBorder,
+                    borderColor: isFeatured
+                      ? isDark
+                        ? 'rgba(255, 149, 0, 0.75)'
+                        : 'rgba(255, 149, 0, 0.45)'
+                      : isHard
+                      ? isDark
+                        ? 'rgba(255, 59, 48, 0.75)'
+                        : 'rgba(255, 59, 48, 0.4)'
+                      : colors.cardBorder,
                   },
                   colors.cardShadow,
                   isFeatured && styles.diffCardFeatured,
@@ -504,7 +512,7 @@ export const BlitzGameScreen: React.FC<{ onClose: () => void }> = ({ onClose }) 
                 </View>
 
                 {/* Bottom CTA bar */}
-                <View style={styles.diffCardBottomBar}>
+                <View style={[styles.diffCardBottomBar, { borderTopColor: colors.separator }]}>
                   <Text style={[styles.diffCardPlayText, { color: diff.color }]}>
                     {t('play_action_play')}
                   </Text>
@@ -903,22 +911,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   diffCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
     ...IOSColors.cardShadow,
   },
   diffCardFeatured: {
-    borderColor: 'rgba(255, 149, 0, 0.45)',
-    backgroundColor: '#FFFFFF',
     borderWidth: 2,
   },
   diffCardHard: {
-    borderColor: 'rgba(255, 59, 48, 0.4)',
-    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
   },
   diffCardTopRow: {
     flexDirection: 'row',
