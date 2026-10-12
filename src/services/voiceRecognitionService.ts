@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { isRunningInExpoGo, requireOptionalNativeModule } from 'expo';
 import { speechService } from '../utils/speechHelper';
 
@@ -22,6 +23,7 @@ class VoiceRecognitionService {
   private currentParams: StartRecognitionParams = {};
   private listeners: VoiceRecognitionEvents = {};
   private nativeModule: any = null;
+  private webRecognition: any = null;
   private isNativeAvailable: boolean = false;
   private subscriptions: (() => void)[] = [];
 
@@ -35,6 +37,14 @@ class VoiceRecognitionService {
    */
   public checkNativeAvailability(): boolean {
     try {
+      // 0. En entorno Web, verificar si el navegador soporta Web Speech API
+      if (Platform.OS === 'web') {
+        const hasWebSpeech = typeof window !== 'undefined' &&
+          Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+        this.isNativeAvailable = hasWebSpeech;
+        return hasWebSpeech;
+      }
+
       // 1. En Expo Go estándar nunca está disponible el módulo nativo.
       // Retornar falso inmediatamente sin intentar cargar el módulo.
       if (typeof isRunningInExpoGo === 'function' && isRunningInExpoGo()) {
@@ -118,6 +128,74 @@ class VoiceRecognitionService {
       return false;
     }
 
+    // Soporte para Web Speech API en navegadores
+    if (Platform.OS === 'web') {
+      try {
+        const SpeechClass = typeof window !== 'undefined' &&
+          ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+        if (!SpeechClass) return false;
+
+        if (this.webRecognition) {
+          try { this.webRecognition.stop(); } catch {}
+        }
+
+        this.webRecognition = new SpeechClass();
+        this.webRecognition.continuous = true;
+        this.webRecognition.interimResults = true;
+        this.webRecognition.lang = params.lang === 'en' ? 'en-US' : 'es-ES';
+
+        this.webRecognition.onstart = () => {
+          this.isListening = true;
+          this.listeners.onStart?.();
+        };
+
+        this.webRecognition.onspeechstart = () => {
+          speechService.stop();
+          this.listeners.onSpeechStart?.();
+        };
+
+        this.webRecognition.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          const currentText = (finalTranscript || interimTranscript).trim();
+          if (currentText) {
+            this.listeners.onResult?.(currentText, Boolean(finalTranscript));
+          }
+        };
+
+        this.webRecognition.onerror = (event: any) => {
+          if (event?.error !== 'no-speech') {
+            this.listeners.onError?.(`Error Web Speech: ${event?.error}`);
+          }
+        };
+
+        this.webRecognition.onend = () => {
+          this.isListening = false;
+          if (this.shouldKeepListening) {
+            try { this.webRecognition.start(); } catch {}
+          } else {
+            this.listeners.onEnd?.();
+          }
+        };
+
+        this.shouldKeepListening = true;
+        this.webRecognition.start();
+        return true;
+      } catch (err: any) {
+        console.warn('[VoiceService Web] Error starting Web Speech:', err);
+        return false;
+      }
+    }
+
     try {
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
@@ -165,6 +243,15 @@ class VoiceRecognitionService {
     this.shouldKeepListening = false;
     this.isListening = false;
 
+    if (this.webRecognition) {
+      try {
+        this.webRecognition.stop();
+      } catch {}
+      this.webRecognition = null;
+      this.listeners.onEnd?.();
+      return;
+    }
+
     if (!this.nativeModule) return;
 
     try {
@@ -185,6 +272,15 @@ class VoiceRecognitionService {
   public async abortListening(): Promise<void> {
     this.shouldKeepListening = false;
     this.isListening = false;
+
+    if (this.webRecognition) {
+      try {
+        this.webRecognition.abort();
+      } catch {}
+      this.webRecognition = null;
+      this.listeners.onEnd?.();
+      return;
+    }
 
     if (!this.nativeModule) return;
 
