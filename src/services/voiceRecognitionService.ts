@@ -38,6 +38,7 @@ class VoiceRecognitionService {
       // 1. En Expo Go estándar nunca está disponible el módulo nativo.
       // Retornar falso inmediatamente sin intentar cargar el módulo.
       if (typeof isRunningInExpoGo === 'function' && isRunningInExpoGo()) {
+        console.log('[VoiceRecognitionService] ⚠️ Entorno: Expo Go detectado. El micrófono nativo en streaming requiere un Development Build (npx expo run:android).');
         this.isNativeAvailable = false;
         this.nativeModule = null;
         return false;
@@ -49,6 +50,7 @@ class VoiceRecognitionService {
         : null;
 
       if (!nativeMod) {
+        console.log('[VoiceRecognitionService] ℹ️ ExpoSpeechRecognition no está vinculado en este binario.');
         this.isNativeAvailable = false;
         this.nativeModule = null;
         return false;
@@ -62,9 +64,11 @@ class VoiceRecognitionService {
           ? this.nativeModule.isRecognitionAvailable()
           : true;
         this.isNativeAvailable = Boolean(available);
+        console.log('[VoiceRecognitionService] ✅ Módulo nativo listo. Disponible:', this.isNativeAvailable);
         return this.isNativeAvailable;
       }
-    } catch {
+    } catch (e: any) {
+      console.warn('[VoiceRecognitionService] Excepción al verificar módulo nativo:', e?.message);
       this.isNativeAvailable = false;
       this.nativeModule = null;
     }

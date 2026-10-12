@@ -51,23 +51,39 @@ export function useHandsFreeQuiz({
 
   // Manejador de transcripción en streaming e interimResults (< 100ms)
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    console.log(`[HandsFree] 🎙️ Texto detectado: "${text}" (isFinal: ${isFinal})`);
     if (!text || matchedFiredRef.current) return;
     setTranscript(text);
 
     // Evaluación ultra-rápida con normalización fonética y prefijos coloquiales
     const match = matchVoiceAnswer(text, targetAnswerRef.current, distractorsRef.current);
+    console.log('[HandsFree] 🔍 Rastreo fonético:', {
+      texto: text,
+      objetivo: targetAnswerRef.current,
+      esAcierto: match.isMatch,
+      esDistractor: match.isDistractor,
+      opcion: match.matchedOption,
+      confianza: Math.round(match.confidence * 100) + '%',
+    });
     setLastMatch(match);
 
     if (match.isMatch && match.matchedOption) {
+      console.log(`[HandsFree] ✅ ¡COINCIDENCIA EXITOSA! Disparando respuesta: "${match.matchedOption}"`);
       matchedFiredRef.current = true;
       soundService.triggerLightTap();
       onAnswerMatchRef.current(match.matchedOption, true);
     } else if (match.isDistractor && match.matchedOption && isFinal) {
-      // Si el jugador pronunció claramente un distractor erróneo al finalizar
+      console.log(`[HandsFree] ❌ Distractor final detectado: "${match.matchedOption}"`);
       matchedFiredRef.current = true;
       onAnswerMatchRef.current(match.matchedOption, false);
     }
   }, []);
+
+  // Función para simular voz en pruebas o en Expo Go
+  const simulateVoiceInput = useCallback((spokenText: string) => {
+    console.log(`[HandsFree] 🧪 Simulando reconocimiento de voz: "${spokenText}"`);
+    handleTranscript(spokenText, true);
+  }, [handleTranscript]);
 
   // Ciclo de vida y listeners del servicio de voz
   useEffect(() => {
@@ -82,11 +98,12 @@ export function useHandsFreeQuiz({
 
     voiceRecognitionService.setEventListeners({
       onStart: () => {
+        console.log('[HandsFree] 🟢 Micrófono nativo abierto y escuchando...');
         setIsListening(true);
         setErrorMessage(null);
       },
       onSpeechStart: () => {
-        // El barge-in ya fue ejecutado en el servicio (silencia el locutor)
+        console.log('[HandsFree] 🗣️ Voz humana detectada (Barge-in)');
       },
       onResult: (text, isFinal) => {
         handleTranscript(text, isFinal);
@@ -95,9 +112,11 @@ export function useHandsFreeQuiz({
         setVolume(vol);
       },
       onError: (err) => {
+        console.log('[HandsFree] 🔴 Error de reconocimiento:', err);
         setErrorMessage(err);
       },
       onEnd: () => {
+        console.log('[HandsFree] ⚪ Reconocimiento finalizado');
         setIsListening(false);
         setVolume(0);
       },
@@ -112,6 +131,7 @@ export function useHandsFreeQuiz({
       })
       .then((started) => {
         setIsListening(started);
+        console.log('[HandsFree] Inicio de escucha:', started ? 'Exitoso' : 'No iniciado');
       })
       .catch((e) => {
         console.warn('[useHandsFreeQuiz] Error starting voice recognition:', e);
@@ -130,5 +150,6 @@ export function useHandsFreeQuiz({
     lastMatch,
     isNativeAvailable,
     errorMessage,
+    simulateVoiceInput,
   };
 }
