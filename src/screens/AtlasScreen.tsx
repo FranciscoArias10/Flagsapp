@@ -24,6 +24,51 @@ import { CountryStudyModal } from '../components/CountryStudyModal';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
+type AtlasDifficultyFilter = 'all' | 1 | 2 | 3;
+
+interface DifficultyOption {
+  value: AtlasDifficultyFilter;
+  labelKey: 'atlas_difficulty_all' | 'atlas_difficulty_easy' | 'atlas_difficulty_medium' | 'atlas_difficulty_hard';
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}
+
+const DIFFICULTY_OPTIONS: DifficultyOption[] = [
+  { value: 'all', labelKey: 'atlas_difficulty_all', icon: 'earth', color: '#007AFF' },
+  { value: 1, labelKey: 'atlas_difficulty_easy', icon: 'leaf', color: '#34C759' },
+  { value: 2, labelKey: 'atlas_difficulty_medium', icon: 'school', color: '#FF9500' },
+  { value: 3, labelKey: 'atlas_difficulty_hard', icon: 'flame', color: '#FF3B30' },
+];
+
+const getDifficultyInfo = (diff: 1 | 2 | 3) => {
+  switch (diff) {
+    case 1:
+      return {
+        labelKey: 'atlas_difficulty_level_1' as const,
+        color: '#34C759',
+        icon: 'leaf' as const,
+        bgLight: 'rgba(52, 199, 89, 0.12)',
+        bgDark: 'rgba(52, 199, 89, 0.22)',
+      };
+    case 2:
+      return {
+        labelKey: 'atlas_difficulty_level_2' as const,
+        color: '#FF9500',
+        icon: 'school' as const,
+        bgLight: 'rgba(255, 149, 0, 0.12)',
+        bgDark: 'rgba(255, 149, 0, 0.22)',
+      };
+    case 3:
+      return {
+        labelKey: 'atlas_difficulty_level_3' as const,
+        color: '#FF3B30',
+        icon: 'flame' as const,
+        bgLight: 'rgba(255, 59, 48, 0.12)',
+        bgDark: 'rgba(255, 59, 48, 0.22)',
+      };
+  }
+};
+
 export const AtlasScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0);
@@ -31,6 +76,7 @@ export const AtlasScreen: React.FC = () => {
   const { language, t, getCountryName, getCapitalName, getCountryFact, getContinentName } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<AtlasDifficultyFilter>('all');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [studyCountry, setStudyCountry] = useState<Country | null>(null);
 
@@ -53,9 +99,13 @@ export const AtlasScreen: React.FC = () => {
 
       const matchesContinent =
         selectedContinent === 'Todos' || country.continent === selectedContinent;
-      return matchesSearch && matchesContinent;
+
+      const matchesDifficulty =
+        selectedDifficulty === 'all' || country.difficulty === selectedDifficulty;
+
+      return matchesSearch && matchesContinent && matchesDifficulty;
     });
-  }, [searchQuery, selectedContinent, getCountryName, getCapitalName]);
+  }, [searchQuery, selectedContinent, selectedDifficulty, getCountryName, getCapitalName]);
 
   const handleSelectCountry = (country: Country) => {
     soundService.triggerLightTap();
@@ -67,48 +117,64 @@ export const AtlasScreen: React.FC = () => {
     setSelectedContinent(filter);
   };
 
-  const renderCountryItem = ({ item }: { item: Country }) => (
-    <Pressable
-      onPress={() => handleSelectCountry(item)}
-      style={({ pressed }) => [
-        styles.countryCard,
-        {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.cardBorder,
-          borderWidth: 1,
-        },
-        colors.cardShadow,
-        pressed && styles.countryCardPressed,
-      ]}
-    >
-      <View style={styles.flagWrap}>
-        <FlagImage
-          countryCode={item.code}
-          fallbackEmoji={item.flagEmoji}
-          width={80}
-          height={52}
-          borderRadius={10}
-        />
-      </View>
-
-      <View style={styles.countryInfo}>
-        <Text style={[styles.countryName, { color: colors.label }]}>
-          {getCountryName(item.code, item.name)}
-        </Text>
-        <View style={styles.detailRow}>
-          <Ionicons name="business-outline" size={13} color={colors.secondaryLabel} />
-          <Text style={[styles.capitalText, { color: colors.secondaryLabel }]}>
-            {getCapitalName(item.code, item.capital)}
-          </Text>
+  const renderCountryItem = ({ item }: { item: Country }) => {
+    const diffInfo = getDifficultyInfo(item.difficulty);
+    return (
+      <Pressable
+        onPress={() => handleSelectCountry(item)}
+        style={({ pressed }) => [
+          styles.countryCard,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: colors.cardBorder,
+            borderWidth: 1,
+          },
+          colors.cardShadow,
+          pressed && styles.countryCardPressed,
+        ]}
+      >
+        <View style={styles.flagWrap}>
+          <FlagImage
+            countryCode={item.code}
+            fallbackEmoji={item.flagEmoji}
+            width={80}
+            height={52}
+            borderRadius={10}
+          />
         </View>
-        <Text style={[styles.continentText, { color: colors.systemBlue }]}>
-          {getContinentName(item.continent)}
-        </Text>
-      </View>
 
-      <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} />
-    </Pressable>
-  );
+        <View style={styles.countryInfo}>
+          <Text style={[styles.countryName, { color: colors.label }]}>
+            {getCountryName(item.code, item.name)}
+          </Text>
+          <View style={styles.detailRow}>
+            <Ionicons name="business-outline" size={13} color={colors.secondaryLabel} />
+            <Text style={[styles.capitalText, { color: colors.secondaryLabel }]}>
+              {getCapitalName(item.code, item.capital)}
+            </Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={[styles.continentText, { color: colors.systemBlue }]}>
+              {getContinentName(item.continent)}
+            </Text>
+            <View
+              style={[
+                styles.diffPill,
+                { backgroundColor: isDark ? diffInfo.bgDark : diffInfo.bgLight },
+              ]}
+            >
+              <Ionicons name={diffInfo.icon} size={10} color={diffInfo.color} style={{ marginRight: 3 }} />
+              <Text style={[styles.diffPillText, { color: diffInfo.color }]}>
+                {t(diffInfo.labelKey)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} />
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.systemBackground, paddingTop: topInset }]}>
@@ -179,6 +245,60 @@ export const AtlasScreen: React.FC = () => {
         </ScrollView>
       </View>
 
+      {/* Difficulty Filter Chips */}
+      <View style={styles.diffChipsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
+          {DIFFICULTY_OPTIONS.map((opt) => {
+            const isActive = selectedDifficulty === opt.value;
+            return (
+              <Pressable
+                key={String(opt.value)}
+                onPress={() => {
+                  soundService.triggerSelection();
+                  setSelectedDifficulty(opt.value);
+                }}
+                style={[
+                  styles.diffChip,
+                  {
+                    backgroundColor: isActive
+                      ? opt.color
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : colors.surface,
+                    borderColor: isActive
+                      ? opt.color
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.12)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                  },
+                  isActive && styles.diffChipActive,
+                ]}
+              >
+                <Ionicons
+                  name={opt.icon}
+                  size={12}
+                  color={isActive ? '#FFFFFF' : opt.color}
+                  style={{ marginRight: 5 }}
+                />
+                <Text
+                  style={[
+                    styles.diffChipText,
+                    { color: isActive ? '#FFFFFF' : colors.secondaryLabel },
+                    isActive && styles.diffChipTextActive,
+                  ]}
+                >
+                  {t(opt.labelKey)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* Countries List */}
       <FlatList
         data={filteredCountries}
@@ -196,6 +316,21 @@ export const AtlasScreen: React.FC = () => {
             <Text style={[styles.emptySubtitle, { color: colors.secondaryLabel }]}>
               {t('atlas_empty_subtitle')}
             </Text>
+            {(selectedContinent !== 'Todos' || selectedDifficulty !== 'all' || searchQuery.length > 0) && (
+              <Pressable
+                onPress={() => {
+                  soundService.triggerLightTap();
+                  setSelectedContinent('Todos');
+                  setSelectedDifficulty('all');
+                  setSearchQuery('');
+                }}
+                style={styles.emptyResetBtn}
+              >
+                <Text style={[styles.emptyResetBtnText, { color: colors.systemBlue }]}>
+                  {language === 'en' ? 'Reset Filters' : 'Restablecer Filtros'}
+                </Text>
+              </Pressable>
+            )}
           </View>
         }
       />
@@ -237,6 +372,23 @@ export const AtlasScreen: React.FC = () => {
               <Text style={[styles.modalContinent, { color: colors.systemBlue }]}>
                 {getContinentName(selectedCountry.continent).toUpperCase()}
               </Text>
+
+              {(() => {
+                const modalDiff = getDifficultyInfo(selectedCountry.difficulty);
+                return (
+                  <View
+                    style={[
+                      styles.modalDiffBadge,
+                      { backgroundColor: isDark ? modalDiff.bgDark : modalDiff.bgLight },
+                    ]}
+                  >
+                    <Ionicons name={modalDiff.icon} size={13} color={modalDiff.color} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalDiffBadgeText, { color: modalDiff.color }]}>
+                      {t(modalDiff.labelKey)}
+                    </Text>
+                  </View>
+                );
+              })()}
 
               <View style={styles.infoCardsRow}>
                 <View style={[styles.infoBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder, borderWidth: 1 }]}>
@@ -371,7 +523,28 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   chipsContainer: {
+    marginBottom: 8,
+  },
+  diffChipsContainer: {
     marginBottom: 12,
+  },
+  diffChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  diffChipActive: {
+    borderWidth: 1,
+  },
+  diffChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  diffChipTextActive: {
+    fontWeight: '700',
   },
   chipsScroll: {
     paddingHorizontal: 20,
@@ -434,6 +607,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  diffPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  diffPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
   capitalText: {
     fontSize: 13,
     color: IOSColors.secondaryLabel,
@@ -460,6 +650,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: IOSColors.tertiaryLabel,
     marginTop: 4,
+  },
+  emptyResetBtn: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  emptyResetBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Modal styles
   modalSafeArea: {
@@ -507,7 +708,19 @@ const styles = StyleSheet.create({
     color: IOSColors.systemBlue,
     letterSpacing: 1,
     marginTop: 4,
-    marginBottom: 20,
+    marginBottom: 6,
+  },
+  modalDiffBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginBottom: 18,
+  },
+  modalDiffBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   infoCardsRow: {
     flexDirection: 'row',
