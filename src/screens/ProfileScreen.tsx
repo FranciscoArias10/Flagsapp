@@ -24,6 +24,7 @@ import { AppleCard } from '../components/AppleCard';
 import { ProgressBar } from '../components/ProgressBar';
 import { AppleButton } from '../components/AppleButton';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { ContinentMasteryChart } from '../components/ContinentMasteryChart';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ThemePreference, LanguagePreference } from '../types';
@@ -328,6 +329,12 @@ export const ProfileScreen: React.FC = () => {
             </Text>
           </View>
         </View>
+
+        {/* Advanced Statistics: Continent Mastery */}
+        <ContinentMasteryChart
+          continentProgress={stats.continentProgress}
+          capitalsProgress={stats.capitalsProgress}
+        />
 
         {/* Cloud & Local Backup */}
         <Text style={[styles.sectionHeader, { color: colors.secondaryLabel }]}>
