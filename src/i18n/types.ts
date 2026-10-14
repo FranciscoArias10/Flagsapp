@@ -326,7 +326,23 @@ export type TranslationKey =
   | 'game_hands_free_badge'
   | 'game_hands_free_listening'
   | 'game_hands_free_dev_notice'
-  | 'game_hands_free_heard';
+  | 'game_hands_free_heard'
+
+  // Continent Mastery & Advanced Stats Keys
+  | 'profile_continent_mastery_title'
+  | 'profile_continent_mastery_subtitle'
+  | 'profile_mastery_view_chart'
+  | 'profile_mastery_view_cards'
+  | 'profile_mastery_level_master'
+  | 'profile_mastery_level_expert'
+  | 'profile_mastery_level_advanced'
+  | 'profile_mastery_level_apprentice'
+  | 'profile_mastery_level_unexplored'
+  | 'profile_mastery_top_continent'
+  | 'profile_mastery_accuracy'
+  | 'profile_mastery_answered_ratio'
+  | 'profile_mastery_no_data'
+  | 'profile_mastery_stars_earned';
 
 export type TranslationsDictionary = Record<TranslationKey, string>;
 

@@ -322,6 +322,22 @@ export const TRANSLATIONS_ES: TranslationsDictionary = {
   game_hands_free_listening: 'Escuchando tu voz...',
   game_hands_free_dev_notice: 'Micrófono nativo requiere Development Build',
   game_hands_free_heard: 'Escuchado:',
+
+  // Dominio Continental y Estadísticas Avanzadas
+  profile_continent_mastery_title: 'Dominio por Continente',
+  profile_continent_mastery_subtitle: 'Tasa de acierto y estadísticas avanzadas por región',
+  profile_mastery_view_chart: 'Gráfica',
+  profile_mastery_view_cards: 'Detalle',
+  profile_mastery_level_master: 'Maestro',
+  profile_mastery_level_expert: 'Experto',
+  profile_mastery_level_advanced: 'Avanzado',
+  profile_mastery_level_apprentice: 'Aprendiz',
+  profile_mastery_level_unexplored: 'Por explorar',
+  profile_mastery_top_continent: 'Mejor Continente',
+  profile_mastery_accuracy: 'Acierto Promedio',
+  profile_mastery_answered_ratio: '{correct} de {total} respondidas',
+  profile_mastery_no_data: 'Sin partidas jugadas aún',
+  profile_mastery_stars_earned: 'Estrellas obtenidas',
 };
 
 export const TRANSLATIONS_EN: TranslationsDictionary = {
@@ -645,6 +661,22 @@ export const TRANSLATIONS_EN: TranslationsDictionary = {
   game_hands_free_listening: 'Listening for your voice...',
   game_hands_free_dev_notice: 'Native microphone requires Development Build',
   game_hands_free_heard: 'Heard:',
+
+  // Continent Mastery & Advanced Stats
+  profile_continent_mastery_title: 'Continent Mastery',
+  profile_continent_mastery_subtitle: 'Accuracy rate and advanced stats by region',
+  profile_mastery_view_chart: 'Chart',
+  profile_mastery_view_cards: 'Details',
+  profile_mastery_level_master: 'Master',
+  profile_mastery_level_expert: 'Expert',
+  profile_mastery_level_advanced: 'Advanced',
+  profile_mastery_level_apprentice: 'Apprentice',
+  profile_mastery_level_unexplored: 'Unexplored',
+  profile_mastery_top_continent: 'Top Continent',
+  profile_mastery_accuracy: 'Average Accuracy',
+  profile_mastery_answered_ratio: '{correct} of {total} answered',
+  profile_mastery_no_data: 'No games played yet',
+  profile_mastery_stars_earned: 'Stars earned',
 };
 
 export const CONTINENT_TRANSLATIONS: Record<string, { es: string; en: string }> = {
